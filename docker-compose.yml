@@ -1,15 +1,15 @@
 services:
   # VictoriaLogs for log storage
   victorialogs:
-    image: victoriametrics/victorialogs:v1.46.0
+    image: victoriametrics/victoria-logs:v1.46.0
     container_name: vsentry-victorialogs
     ports:
       - "9428:9428"
     volumes:
-      - victorialogs-data:/var/lib/victorialogs
+      - victorialogs-data:/victoria-logs-data
     command:
       - -httpListenAddr=:9428
-      - -storageDataPath=/var/lib/victorialogs
+      - -storageDataPath=/victoria-logs-data
     restart: unless-stopped
     networks:
       - vsentry-network
