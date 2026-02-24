@@ -11,3 +11,4 @@ database:
 jwt:
   secret: "change-this-secret-in-production"
   expire_hours: 72
+  expire_hours: 72
