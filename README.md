@@ -1,14 +1,14 @@
 # VSentry - SIEM + SOAR Platform
 
 <p align="center">
-  <a href="https://github.com/xubo/vsentry">
-    <img src="https://img.shields.io/github/stars/xubo/vsentry?style=social" alt="Stars">
+  <a href="https://github.com/laenix/vsentry">
+    <img src="https://img.shields.io/github/stars/laenix/vsentry?style=social" alt="Stars">
   </a>
-  <a href="https://github.com/xubo/vsentry/blob/main/LICENSE">
+  <a href="https://github.com/laenix/vsentry/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
   </a>
-  <a href="https://github.com/xubo/vsentry/releases">
-    <img src="https://img.shields.io/github/v/release/xubo/vsentry" alt="Release">
+  <a href="https://github.com/laenix/vsentry/releases">
+    <img src="https://img.shields.io/github/v/release/laenix/vsentry" alt="Release">
   </a>
 </p>
 
@@ -81,7 +81,7 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 
 ```bash
 # Clone the repository
-git clone https://github.com/xubo/vsentry.git
+git clone https://github.com/laenix/vsentry.git
 cd vsentry
 
 # Start all services
@@ -221,4 +221,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-Built with ❤️ by [XuBo](https://github.com/xubo)
+Built with ❤️ by [XuBo](https://github.com/laenix)
