@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # VictoriaLogs for log storage
+  victorialogs:
+    image: victoriametrics/victorialogs:v1.24.0
+    container_name: vsentry-victorialogs
+    ports:
+      - "9428:9428"
+    volumes:
+      - victorialogs-data:/var/lib/victorialogs
+    command:
+      - -httpListenAddr=:9428
+      - -storageDataPath=/var/lib/victorialogs
+    restart: unless-stopped
+    networks:
+      - vsentry-network
+
+  # VSentry Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vsentry-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/config:/app/config
+      - vsentry-data:/app/data
+    environment:
+      - VICTORIALOGS_URL=http://victorialogs:9428
+      - JWT_SECRET=your-secret-key-change-in-production
+    depends_on:
+      - victorialogs
+    restart: unless-stopped
+    networks:
+      - vsentry-network
+
+  # VSentry Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vsentry-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - vsentry-network
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: vsentry-nginx
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    networks:
+      - vsentry-network
+
+volumes:
+  victorialogs-data:
+  vsentry-data:
+
+networks:
+  vsentry-network:
+    driver: bridge

@@ -1,0 +1,41 @@
+# Binaries
+vsentry
+vsentry.exe
+*.exe
+
+# Data
+*.db
+badger_data/
+victorialogs-data/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Frontend
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+vendor/
+*.test
+coverage.txt
+
+# Misc
+*.zip
+*.tar.gz

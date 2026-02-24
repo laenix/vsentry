@@ -1,0 +1,24 @@
+# Binaries
+vsentry
+vsentry.exe
+
+# Data
+*.db
+badger_data/
+victorialogs-data/
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.zip
+*.tar.gz
+dist/

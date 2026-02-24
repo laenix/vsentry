@@ -1,0 +1,13 @@
+server:
+  port: "8080"
+  external_url: "http://localhost:8088"
+
+victorialogs:
+  url: "http://localhost:9428"
+
+database:
+  path: "vsentry.db"
+
+jwt:
+  secret: "change-this-secret-in-production"
+  expire_hours: 72
