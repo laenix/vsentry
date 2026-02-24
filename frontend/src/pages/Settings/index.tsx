@@ -36,10 +36,11 @@ export default function SettingsPage() {
       const res = await userService.list();
       if (res.code === 200) {
         let list: User[] = [];
-        if (Array.isArray(res.data)) {
-          list = res.data;
-        } else if (res.data?.users) {
-          list = res.data.users;
+        const data = res.data as any;
+        if (Array.isArray(data)) {
+          list = data;
+        } else if (data?.users) {
+          list = data.users;
         }
         setUsers(list);
       }

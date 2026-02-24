@@ -2,8 +2,8 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
-RUN apk add --no-cache git
+# Install build dependencies including gcc for CGO
+RUN apk add --no-cache git gcc musl-dev
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -12,8 +12,8 @@ RUN go mod download
 # Copy source
 COPY . .
 
-# Build
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o vsentry .
+# Build with CGO enabled (required for go-sqlite3)
+RUN CGO_ENABLED=1 GOOS=linux go build -o vsentry .
 
 # Final stage
 FROM alpine:latest
