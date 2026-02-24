@@ -1,7 +1,7 @@
 services:
   # VictoriaLogs for log storage
   victorialogs:
-    image: victoriametrics/victorialogs:v1.24.0
+    image: victoriametrics/victorialogs:v1.46.0
     container_name: vsentry-victorialogs
     ports:
       - "9428:9428"
