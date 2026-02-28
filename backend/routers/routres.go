@@ -22,7 +22,8 @@ func CollectRouter(r *gin.Engine) *gin.Engine {
 		r.Use(gin.Logger())
 		r.Use(gin.Recovery())
 		
-		// 静态文件服务
+		// 静态文件服务 - Vite 构建的应用使用 /assets 路径
+		r.Static("/assets", staticPath+"/assets")
 		r.Static("/static", staticPath)
 		
 		// API 路由需要 /api 前缀
