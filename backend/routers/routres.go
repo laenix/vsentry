@@ -2,6 +2,7 @@ package routers
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/laenix/vsentry/controller"
@@ -9,6 +10,48 @@ import (
 )
 
 func CollectRouter(r *gin.Engine) *gin.Engine {
+
+	// 托管前端静态文件
+	staticPath := os.Getenv("STATIC_PATH")
+	if staticPath == "" {
+		staticPath = "./dist"
+	}
+	
+	// 尝试加载静态文件目录
+	if _, err := os.Stat(staticPath); err == nil {
+		r.Use(gin.Logger())
+		r.Use(gin.Recovery())
+		
+		// 静态文件服务
+		r.Static("/static", staticPath)
+		
+		// API 路由需要 /api 前缀
+		api := r.Group("/api")
+		{
+			setupAPIRoutes(api)
+		}
+		
+		// SPA Fallback: 所有非 API 路由都返回 index.html
+		r.NoRoute(func(c *gin.Context) {
+			path := c.Request.URL.Path
+			// 跳过 API 路径
+			if path == "/api" || len(path) > 5 && path[:4] == "/api" {
+				c.JSON(404, gin.H{"code": 404, "msg": "API not found"})
+				return
+			}
+			c.File(staticPath + "/index.html")
+		})
+		
+		return r
+	}
+
+	// 如果没有静态文件，使用原来的 API 路由方式 (无 /api 前缀)
+	setupAPIRoutes(r.Group(""))
+	
+	return r
+}
+
+func setupAPIRoutes(r *gin.RouterGroup) {
 	r.GET("/ip", func(c *gin.Context) {
 		c.String(http.StatusOK, c.ClientIP())
 	})
@@ -135,5 +178,4 @@ func CollectRouter(r *gin.Engine) *gin.Engine {
 		automation.GET("/executions", controller.ListAllExecutions) // 获取所有执行记录
 
 	}
-	return r
 }

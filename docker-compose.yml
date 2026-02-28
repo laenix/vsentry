@@ -14,40 +14,27 @@ services:
     networks:
       - vsentry-network
 
-  # VSentry Backend
+  # VSentry Backend (with embedded frontend)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: vsentry-backend
     ports:
-      - "8080:8080"
+      - "8088:8088"
     volumes:
       - ./backend/config:/app/config
+      - ./frontend/dist:/app/dist:ro
       - vsentry-data:/app/data
     environment:
       - VICTORIALOGS_URL=http://victorialogs:9428
       - JWT_SECRET=your-secret-key-change-in-production
+      - STATIC_PATH=/app/dist
       # 设置外部访问地址，用于生成 Collector 端点（支持 IP 或域名）
       # 示例: EXTERNAL_URL=http://192.168.1.100:8088
       # 示例: EXTERNAL_URL=https://vsentry.yourdomain.com
       - EXTERNAL_URL=${EXTERNAL_URL:-http://localhost:8088}
     depends_on:
-      - victorialogs
-    restart: unless-stopped
-    networks:
-      - vsentry-network
-
-  # VSentry Frontend (includes nginx + static files)
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: vsentry-frontend
-    ports:
-      - "8088:80"
-    depends_on:
-      - backend
       - victorialogs
     restart: unless-stopped
     networks:

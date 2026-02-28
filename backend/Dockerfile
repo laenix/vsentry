@@ -27,6 +27,6 @@ COPY config/ ./config/
 
 ENV TZ=UTC
 
-EXPOSE 8080
+EXPOSE 8088
 
 CMD ["./vsentry"]
