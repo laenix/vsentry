@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/laenix/vsentry/database"
+	"github.com/spf13/viper"
 )
 
 // LogPayload 包装日志数据及其元数据，用于在 Channel 中传输
@@ -53,8 +54,12 @@ func processPayload(payload LogPayload) {
 	id := payload.Config.ID
 	w, ok := activeWorkers[id]
 
-	// Use local VictoriaLogs for forwarding (configured in config.yaml)
-	localEndpoint := "http://localhost:9428/insert/jsonline"
+	// 从 config.yaml 读取 VictoriaLogs URL
+	vLogsAddr := viper.GetString("victorialogs.url")
+	if vLogsAddr == "" {
+		vLogsAddr = "http://victorialogs:9428" // 默认使用容器网络名
+	}
+	localEndpoint := vLogsAddr + "/insert/jsonline"
 
 	// 1. 如果配置发生变更（例如 StreamFields 变了），重启实例以应用新标签
 	if ok && (w.instance.url != localEndpoint) {

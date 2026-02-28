@@ -22,6 +22,17 @@ export interface VLHitsResponse {
 }
 
 /**
+ * 获取 Token（与 vsentry-client.ts 保持一致）
+ */
+function getAuthHeader(): Record<string, string> {
+  const token = localStorage.getItem("vsentry_token");
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+}
+
+/**
  * 核心：构建 Form Data (复用逻辑)
  */
 function buildParams(query: string, start?: string, end?: string, limit?: number | string): URLSearchParams {
@@ -52,6 +63,7 @@ export async function runVLQuery<T = VLResult>(
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
+      ...getAuthHeader(), // 添加 Token 认证
     },
     body: body,
   });
@@ -101,32 +113,38 @@ export async function runVLQuery<T = VLResult>(
 /**
  * 2. 查询命中总数 (POST /select/logsql/hits)
  * 通过后端 API 代理
+ * 注意：VictoriaLogs /select/logsql/hits 在 v1.46.0 有兼容性问题，暂不抛出错误
  */
 export async function runVLHits(
   query: string,
   start?: string,
   end?: string
 ): Promise<number> {
-  const body = buildParams(query, start, end);
+  try {
+    const body = buildParams(query, start, end);
+    const response = await fetch("/api/select/logsql/hits", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        ...getAuthHeader(),
+      },
+      body: body,
+    });
 
-  const response = await fetch("/api/select/logsql/hits", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body,
-  });
+    if (!response.ok) {
+      // hits 接口失败时返回预估数量，不阻塞主查询
+      return 0;
+    }
 
-  if (!response.ok) {
-    throw new Error(`Hits check failed: ${response.status}`);
-  }
-
-  const data = await response.json();
-  
-  // ✅ 核心修复：兼容多种返回格式
-  if (typeof data.hits === 'number') {
-    return data.hits;
-  } else if (Array.isArray(data.hits) && data.hits.length > 0) {
-    // 处理 { hits: [{ total: 1927, ... }] } 格式
-    return data.hits[0].total || 0;
+    const data = await response.json();
+    
+    if (typeof data.hits === 'number') {
+      return data.hits;
+    } else if (Array.isArray(data.hits) && data.hits.length > 0) {
+      return data.hits[0].total || 0;
+    }
+  } catch (e) {
+    console.warn("Hits query failed:", e);
   }
   
   return 0;

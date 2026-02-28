@@ -25,12 +25,15 @@ type Ingest struct {
 }
 
 func NewIngest(url string, batchSize int, flushInterval time.Duration, fields string) *Ingest {
+	// 避免重复添加 _stream_fields= 前缀
 	if len(url) > 0 {
 		if strings.Contains(url, "?") {
 			url += "&"
 		} else {
 			url += "?"
 		}
+		// 去除已存在的 _stream_fields= 前缀
+		fields = strings.TrimPrefix(fields, "_stream_fields=")
 		url += "_stream_fields=" + fields
 	}
 	return &Ingest{
