@@ -41,6 +41,38 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 - **User Management** - Multi-user with role-based access
 - **System Settings** - Configure external URLs and parameters
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/readme-dashboard.png" alt="Dashboard" width="800">
+  <br><em>Dashboard - Security Overview</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/readme-logs.png" alt="Logs" width="800">
+  <br><em>Logs - Search and analyze logs with LogSQL</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/readme-rules.png" alt="Rules" width="800">
+  <br><em>Rules - Detection rules with cron scheduling</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/readme-incidents.png" alt="Incidents" width="800">
+  <br><em>Incidents - Track and manage security incidents</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/readme-automation.png" alt="Automation" width="800">
+  <br><em>Automation - SOAR workflow with React Flow</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/readme-settings.png" alt="Settings" width="800">
+  <br><em>Settings - Configure system and collectors</em>
+</p>
+
 ## 🏗️ Architecture
 
 ```
