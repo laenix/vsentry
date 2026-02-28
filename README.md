@@ -122,6 +122,31 @@ npm run build
 
 ## 🔧 Configuration
 
+### Using Environment Variables (Recommended)
+
+When running with Docker Compose, you can use environment variables to override settings:
+
+```bash
+# 方式 1: 使用 .env 文件
+echo "EXTERNAL_URL=http://your-server-ip:8088" > .env
+docker-compose up -d
+
+# 方式 2: 直接在命令行指定
+EXTERNAL_URL=http://192.168.1.100:8088 docker-compose up -d
+```
+
+**Available Environment Variables:**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `EXTERNAL_URL` | 外部访问地址，用于生成 Collector 端点 | `http://localhost:8088` |
+| `VICTORIALOGS_URL` | VictoriaLogs 服务地址 | `http://victorialogs:9428` |
+| `JWT_SECRET` | JWT 密钥 | `your-secret-key-change-in-production` |
+
+> **Tip**: For production, always set `EXTERNAL_URL` to your public IP or domain (e.g., `http://192.168.1.100:8088` or `https://vsentry.yourdomain.com`). This ensures the built collectors can correctly report to your server.
+
+### Using Config File
+
 Configuration file: `backend/config/config.yaml`
 
 ```yaml

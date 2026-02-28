@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"log"
+	"os"
 
 	"github.com/laenix/vsentry/model"
 	"github.com/spf13/viper"
@@ -87,10 +88,16 @@ func createDefaultIngest(db *gorm.DB) {
 	token := hex.EncodeToString(tokenBytes)
 
 	// 获取外部访问地址（用于客户端接入）
-	externalURL := viper.GetString("server.external_url")
+	// 优先级：环境变量 EXTERNAL_URL > config.yaml > 默认值
+	externalURL := os.Getenv("EXTERNAL_URL")
+	if externalURL == "" {
+		externalURL = viper.GetString("server.external_url")
+	}
 	if externalURL == "" {
 		externalURL = "http://localhost:8088"
 	}
+
+	log.Printf("Using external URL for ingest endpoint: %s", externalURL)
 
 	// 创建默认 Ingest - 使用外部URL（通过后端转发）
 	ingest := model.Ingest{
