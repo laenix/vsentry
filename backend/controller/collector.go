@@ -595,42 +595,42 @@ func BuildCollector(ctx *gin.Context) {
 	ctx.File(binaryPath)
 }
 
-// compileAgentDynamic 核心编译逻辑：利用临时隔离目录保证并发构建的安全
+// compileAgentDynamic 核心编译逻辑：利用临时隔离目录保证并发构建的安全，并解决 Monorepo 依赖路径问题
 func compileAgentDynamic(targetOS model.CollectorType, configJSON []byte) (string, error) {
-	// Monorepo 架构下，Agent 源码默认在后端运行目录的 ./cmd/collectors 下
-	// 如果你将 VSentry 部署在 Docker 中，请确保这个路径与 Dockerfile 中的源码路径一致
-	sourceDir := "./cmd/collectors"
-	if _, err := os.Stat(sourceDir); os.IsNotExist(err) {
-		return "", fmt.Errorf("agent source directory not found at %s", sourceDir)
-	}
-
 	// 1. 创建隔离的临时目录，防止并发构建时配置互相覆盖
 	tempBuildDir, err := os.MkdirTemp("", "vsentry-build-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tempBuildDir) // 无论成功失败，结束时清理临时源码目录
+	defer os.RemoveAll(tempBuildDir) // 无论成功失败，结束时彻底清理这个临时源码沙箱
 
-	// 2. 将纯净的 Agent 源码拷贝到临时目录
-	if err := copyDir(sourceDir, tempBuildDir); err != nil {
-		return "", fmt.Errorf("failed to copy agent source: %w", err)
+	// 2. 将当前运行目录下的核心代码骨架拷贝到临时目录
+	// 注意：在 Docker 中，我们的工作目录是 /app，里面有 go.mod, pkg, 和 cmd
+	if err := copyFile("./go.mod", filepath.Join(tempBuildDir, "go.mod")); err != nil {
+		return "", fmt.Errorf("failed to copy go.mod: %w", err)
+	}
+	// 容错处理 go.sum，可能不存在
+	copyFile("./go.sum", filepath.Join(tempBuildDir, "go.sum"))
+
+	if err := copyDir("./pkg", filepath.Join(tempBuildDir, "pkg")); err != nil {
+		return "", fmt.Errorf("failed to copy pkg directory: %w", err)
+	}
+	if err := copyDir("./cmd", filepath.Join(tempBuildDir, "cmd")); err != nil {
+		return "", fmt.Errorf("failed to copy cmd directory: %w", err)
 	}
 
-	// 3. 将动态配置写入 embed 预期的路径 (精确覆盖空白的 config.json)
-	configFilePath := filepath.Join(tempBuildDir, "config", "config.json")
+	// 3. 将动态生成的 OCSF 和 Token 配置，精准注入到 Agent 的 config 目录覆盖占位文件
+	configFilePath := filepath.Join(tempBuildDir, "cmd", "collectors", "config", "config.json")
 	if err := os.WriteFile(configFilePath, configJSON, 0644); err != nil {
 		return "", fmt.Errorf("failed to write embedded config: %w", err)
 	}
 
-	// 4. 准备交叉编译环境
+	// 4. 准备交叉编译环境参数
 	goos := "linux"
-	switch targetOS {
-	case "windows":
+	if targetOS == "windows" {
 		goos = "windows"
-	case "macos":
+	} else if targetOS == "macos" {
 		goos = "darwin"
-	default:
-		goos = "linux"
 	}
 
 	outputFile := filepath.Join(tempBuildDir, "vsentry-agent")
@@ -639,25 +639,23 @@ func compileAgentDynamic(targetOS model.CollectorType, configJSON []byte) (strin
 	}
 
 	// 5. 调用 Go 编译器
-	// -trimpath: 隐藏服务器路径信息，增加逆向难度
-	// -s -w: 剥离符号表和调试信息，大幅减小二进制体积
+	// 注意核心改变：将执行目录切换到临时目录下的 cmd/collectors 中
 	cmd := exec.Command("go", "build", "-trimpath", "-ldflags", "-s -w", "-o", outputFile, ".")
-	cmd.Dir = tempBuildDir
+	cmd.Dir = filepath.Join(tempBuildDir, "cmd", "collectors")
 
-	// 继承宿主环境变量，但强制覆盖交叉编译核心参数
+	// 继承宿主环境变量 (如 Dockerfile 里设置的 GOCACHE)，但强制覆盖交叉编译核心参数
 	cmd.Env = append(os.Environ(),
 		"GOOS="+goos,
-		"GOARCH=amd64",  // 默认构建 amd64，如果未来需要支持 ARM，可将此变为参数
-		"CGO_ENABLED=0", // 强制关闭 CGO，确保零依赖
+		"GOARCH=amd64",  // 默认 amd64，后续若需 ARM 支持可变为动态参数
+		"CGO_ENABLED=0", // 强制关闭 CGO，确保编译出的二进制在任何机器都能直接跑
 	)
 
-	// 捕获编译时的标准输出和错误
+	// 捕获编译时的标准输出和错误，方便在界面上排错
 	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Printf("Compile error output: %s", string(output))
-		return "", fmt.Errorf("go build failed: %s", string(output))
+		return "", fmt.Errorf("go build failed: %s\nOutput: %s", err.Error(), string(output))
 	}
 
-	// 6. 将生成的二进制文件移出临时目录，存放到系统的 /tmp 下供后续下载
+	// 6. 将生成的最终二进制文件移出临时目录，存放到系统的公用 /tmp 下供前端下载流读取
 	finalPath := filepath.Join(os.TempDir(), fmt.Sprintf("agent_%d_%s", time.Now().UnixNano(), filepath.Base(outputFile)))
 	if err := copyFile(outputFile, finalPath); err != nil {
 		return "", fmt.Errorf("failed to move compiled binary: %w", err)

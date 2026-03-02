@@ -1,42 +1,49 @@
-# Build stage - Build VSentry and collectors
-FROM golang:1.23-bookworm AS builder
+# ==========================================
+# 第一阶段：构建 VSentry 后端主程序
+# ==========================================
+FROM golang:1.23-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-# Copy go mod files for main app
+# 1. 缓存依赖，加速后续构建
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
-# Copy VSentry source
-COPY backend/ backend/
+# 2. 拷贝后端所有代码并编译单体二进制
+COPY backend/ ./backend/
+WORKDIR /build/backend
+# 开启 Trimpath 并精简符号表
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "-s -w" -o vsentry .
 
-# Build main VSentry application
-WORKDIR /app/backend
-RUN go mod tidy && CGO_ENABLED=0 go build -o vsentry .
-
-# Build collectors for Linux (no CGO needed)
-WORKDIR /app/backend/cmd/collectors
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o vsentry-agent .
-
-# Build collectors for Windows (uses syscall, no CGO)
-RUN CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o vsentry-agent.exe .
-
-# Final stage - use distroless for minimal image
-FROM gcr.io/distroless/static:nonroot
+# ==========================================
+# 第二阶段：构建最终运行时环境 (包含 Go 工具链)
+# ==========================================
+FROM golang:1.23-alpine
 
 WORKDIR /app
 
-# Copy main app
-COPY --from=builder /app/backend/vsentry .
+# 安装时区数据，保证日志时间戳准确
+RUN apk add --no-cache tzdata
 
-# Copy collectors
-COPY --from=builder /app/backend/cmd/collectors/vsentry-agent /app/collector/vsentry-agent
-COPY --from=builder /app/backend/cmd/collectors/vsentry-agent.exe /app/collector/vsentry-agent.exe
+# 1. 拷贝编译好的后端主程序
+COPY --from=builder /build/backend/vsentry ./vsentry
 
-# Copy config
-COPY --from=builder /app/backend/config/ ./config/
+# 2. 【核心变更】拷贝动态编译 Agent 所需的“源码 SDK”
+# 因为 Agent 导入了 github.com/laenix/vsentry/pkg/ocsf，
+# 所以必须保留 go.mod 和 pkg 目录，否则容器内 go build 会报找不到模块。
+COPY backend/go.mod backend/go.sum ./
+COPY backend/pkg/ ./pkg/
+COPY backend/cmd/ ./cmd/
+
+# 3. 预下载 Agent 的编译依赖到容器本地缓存，让前端点击 Build 时瞬间完成
+RUN go mod download
+
+# 4. 拷贝静态配置 (保持不变)
+COPY backend/config/ ./config/
 
 EXPOSE 8088
 
-USER root
+# 挂载数据卷以持久化 GOCACHE
+ENV GOCACHE=/app/data/.gocache
+
 CMD ["./vsentry"]
