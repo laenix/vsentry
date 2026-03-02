@@ -9,12 +9,21 @@ import (
 
 // Config represents the collector configuration
 type Config struct {
-	Name     string      `yaml:"name"`
-	Type     string      `yaml:"type"`
-	Channels []string    `yaml:"channels"`
-	Ingest   IngestConfig `yaml:"ingest"`
-	Interval int         `yaml:"interval"`
-	Hostname string      `yaml:"hostname,omitempty"`
+	Name     string         `yaml:"name"`
+	Type     string         `yaml:"type"`
+	Interval int            `yaml:"interval"`
+	Channels []string       `yaml:"channels"`        // For Windows (comma-separated)
+	Sources  []SourceConfig `yaml:"sources"`        // For Linux
+	Ingest   IngestConfig   `yaml:"ingest"`
+	Hostname string         `yaml:"hostname,omitempty"`
+}
+
+// SourceConfig defines a single log source
+type SourceConfig struct {
+	Type    string `yaml:"type"`     // syslog, nginx_access, ssh, etc
+	Path    string `yaml:"path"`     // file path
+	Format  string `yaml:"format"`   // log format
+	Enabled bool   `yaml:"enabled"`  // whether to collect
 }
 
 // IngestConfig contains VSentry ingestion settings

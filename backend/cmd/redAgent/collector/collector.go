@@ -183,3 +183,20 @@ func (c *SyslogCollector) GetClient() *ingest.Client {
 func (c *SyslogCollector) GetStorage() *storage.Storage {
 	return c.store
 }
+// SourceConfigFromJSON parses JSON string to []SourceConfig
+func SourceConfigFromJSON(jsonStr string) ([]SourceConfig, error) {
+	if jsonStr == "" {
+		return []SourceConfig{}, nil
+	}
+	var sources []SourceConfig
+	if err := json.Unmarshal([]byte(jsonStr), &sources); err != nil {
+		return nil, err
+	}
+	return sources, nil
+}
+
+// SourceConfigToJSON converts []SourceConfig to JSON string
+func SourceConfigToJSON(sources []SourceConfig) string {
+	data, _ := json.Marshal(sources)
+	return string(data)
+}

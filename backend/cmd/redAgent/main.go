@@ -2,13 +2,13 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -55,9 +55,12 @@ func main() {
 	var coll collector.Collector
 	switch cfg.Type {
 	case "windows":
-		coll = collector.NewWindowsEventCollector(cfg.Channels, store, client)
+		// For Windows, use channels (comma-separated string)
+		channels := strings.Join(cfg.Channels, ",")
+		coll = collector.NewWindowsEventCollector(strings.Split(channels, ","), store, client)
 	case "linux":
-		coll = collector.NewSyslogCollector(cfg.Channels, store, client)
+		// For Linux, use sources from config
+		coll = collector.NewLinuxFileCollector(cfg.Sources, store, client)
 	default:
 		log.Fatalf("Unknown collector type: %s", cfg.Type)
 	}
