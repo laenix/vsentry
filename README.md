@@ -73,8 +73,8 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/incident-detail.png" alt="Incident Detail" width="800">
-  <br><em>事件详情页：展示告警原始日志内容、事件时间线、状态变更历史</em>
+  <img src="docs/screenshots/incident-detail-correct.png" alt="Incident Detail" width="800">
+  <br><em>事件详情弹窗：点击眼睛按钮查看，包含告警原始日志、严重程度、状态，支持确认/解决操作</em>
 </p>
 
 ### 5. Automation - SOAR 自动化编排
