@@ -95,6 +95,11 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
   <br><em>系统管理：用户管理、采集器配置、接入点管理、外观设置</em>
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/readme-ingest-page.png" alt="Ingest Management" width="800">
+  <br><em>Ingest 接入点管理：查看日志接入端点地址和认证 Token，配置后可供 Collector 使用</em>
+</p>
+
 ## 🏗️ Architecture
 
 ```
