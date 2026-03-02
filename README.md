@@ -57,14 +57,19 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 
 ### 3. Rules - 检测规则管理
 <p align="center">
-  <img src="docs/screenshots/readme-rules.png" alt="Rules" width="800">
-  <br><em>创建和管理检测规则，支持 Cron 定时调度、规则模板、启用/禁用控制</em>
+  <img src="docs/screenshots/readme-rules-page.png" alt="Rules List" width="800">
+  <br><em>规则列表页，查看所有检测规则及状态</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/readme-rules-form.png" alt="Rules Form" width="800">
+  <br><em>创建/编辑规则：支持 LogSQL 查询表达式、Cron 定时调度（精确到秒）、严重程度分级</em>
 </p>
 
 ### 4. Incidents - 事件管理
 <p align="center">
-  <img src="docs/screenshots/readme-incidents.png" alt="Incidents" width="800">
-  <br><em>安全事件全生命周期管理，支持分配、确认、处理、分类等操作</em>
+  <img src="docs/screenshots/readme-incidents-page.png" alt="Incidents" width="800">
+  <br><em>安全事件中心：展示所有安全告警事件，支持状态流转（新建→已确认→已解决）</em>
 </p>
 
 ### 5. Automation - SOAR 自动化编排
