@@ -31,14 +31,20 @@ func QueryVictoriaLogs(ctx *gin.Context) {
 	if limit != "" {
 		params.Set("limit", limit)
 	}
-	// VictoriaLogs 需要 ISO 格式时间（不带 Z 后缀）或 Unix 时间戳
+	// VictoriaLogs 需要 ISO 格式时间（不带 Z 后缀或毫秒）或 Unix 时间戳
 	if start != "" {
-		// 移除 UTC 时区的 Z 后缀
+		// 移除 UTC 时区的 Z 后缀和毫秒
 		start = strings.TrimSuffix(start, "Z")
+		if idx := strings.Index(start, "."); idx != -1 {
+			start = start[:idx] // 移除毫秒部分
+		}
 		params.Set("start", start)
 	}
 	if end != "" {
 		end = strings.TrimSuffix(end, "Z")
+		if idx := strings.Index(end, "."); idx != -1 {
+			end = end[:idx] // 移除毫秒部分
+		}
 		params.Set("end", end)
 	}
 
