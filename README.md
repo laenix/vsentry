@@ -83,21 +83,22 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
   <br><em>可视化剧本编排，连接检测规则与响应动作，支持 HTTP、邮件、条件分支等动作</em>
 </p>
 
-### 6. Collectors - 日志采集器
+### 6. Ingest - 日志接入点
+<p align="center">
+  <img src="docs/screenshots/readme-ingest.png" alt="Ingest" width="800">
+  <br><em>日志接入点管理：生成 API 地址和认证 Token，Collector 通过此端点推送日志</em>
+</p>
+
+### 7. Collectors - 日志采集器
 <p align="center">
   <img src="docs/screenshots/readme-collectors.png" alt="Collectors" width="800">
   <br><em>构建跨平台日志采集器（Windows/Linux/macOS），一键生成配置文件</em>
 </p>
 
-### 7. Settings - 系统配置
+### 8. Settings - 系统配置
 <p align="center">
   <img src="docs/screenshots/readme-settings.png" alt="Settings" width="800">
-  <br><em>系统管理：用户管理、采集器配置、接入点管理、外观设置</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/readme-ingest-page.png" alt="Ingest Management" width="800">
-  <br><em>Ingest 接入点管理：查看日志接入端点地址和认证 Token，配置后可供 Collector 使用</em>
+  <br><em>系统管理：用户管理、采集器配置、外观设置</em>
 </p>
 
 ## 🏗️ Architecture
