@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/laenix/vsentry/automation"
@@ -17,25 +18,23 @@ import (
 
 // ExecuteRule 执行规则查询
 func ExecuteRule(rule model.Rule) {
-	// 1. 从配置获取 VictoriaLogs 地址
 	vLogsAddr := viper.GetString("victorialogs.url")
 	if vLogsAddr == "" {
-		vLogsAddr = "http://127.0.0.1:9428" // 默认地址
+		vLogsAddr = "http://127.0.0.1:9428"
 	}
 
-	// 2. 添加默认时间范围：最近 12 小时
-	// 注意：这里用 UTC 时间，因为日志存储的是 UTC 时间戳
-	twelveHoursAgo := time.Now().UTC().Add(-12 * time.Hour).Format("2006-01-02T15:04:05")
-	now := time.Now().UTC().Format("2006-01-02T15:04:05")
+	// VictoriaLogs 接受 ISO8601 格式，需去除毫秒
+	twelveHoursAgo := time.Now().UTC().Add(-12 * time.Hour).Format("2006-01-02T15:04:05Z")
+	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
 
-	log.Printf("[Rule:%d] Executing: %s (time: %s to %s)", rule.ID, rule.Query, twelveHoursAgo, now)
+	// 【修复1】：强制组合查询语句，注入严格的时间边界
+	finalQuery := fmt.Sprintf("(%s) AND _time:[%s, %s]", rule.Query, twelveHoursAgo, now)
+	log.Printf("[Rule:%d] Executing: %s", rule.ID, finalQuery)
 
-	// 构造 VictoriaLogs 查询请求 - 暂时不限制时间范围，查询所有数据确保能匹配
-	resp, err := http.PostForm(vLogsAddr+"/select/logsql/query", 
-		url.Values{
-			"query": {rule.Query},
-			"limit": {"1000"},
-		})
+	resp, err := http.PostForm(vLogsAddr+"/select/logsql/query", url.Values{
+		"query": {finalQuery},
+		"limit": {"1000"},
+	})
 	if err != nil {
 		log.Printf("[Rule:%d] Request failed: %v", rule.ID, err)
 		return
@@ -44,13 +43,9 @@ func ExecuteRule(rule model.Rule) {
 
 	body, _ := io.ReadAll(resp.Body)
 	if len(body) == 0 {
-		log.Printf("[Rule:%d] No results", rule.ID)
 		return
 	}
 
-	log.Printf("[Rule:%d] Found %d bytes of results", rule.ID, len(body))
-
-	// 触发告警入库，包含你喜欢的 Label 和 Assignee
 	saveAlert(rule, string(body))
 }
 
@@ -58,13 +53,11 @@ func saveAlert(rule model.Rule, evidence string) {
 	db := database.GetDB()
 	now := time.Now()
 
-	// 1. 查找是否存在该规则的活跃事件 (未解决的)
 	var incident model.Incident
 	err := db.Where("rule_id = ? AND status != ?", rule.ID, "resolved").
 		Order("last_seen desc").First(&incident).Error
 
 	if err != nil {
-		// 创建新 Incident
 		incident = model.Incident{
 			RuleID:    rule.ID,
 			Name:      rule.Name,
@@ -76,24 +69,38 @@ func saveAlert(rule model.Rule, evidence string) {
 		db.Create(&incident)
 	}
 
-	// 2. 检查指纹去重（防止同一条原始日志重复生成证据）
-	fp := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%d-%s", rule.ID, evidence))))
-	var alert model.Alert
-	if db.Where("fingerprint = ?", fp).First(&alert).Error != nil {
-		// 存储新证据并关联到 Incident
-		alert = model.Alert{
-			IncidentID:  incident.ID,
-			RuleID:      rule.ID,
-			Content:     evidence,
-			Fingerprint: fp,
-		}
-		db.Create(&alert)
+	// 【修复2】：解析 NDJSON，针对每一条原始日志计算独立指纹
+	lines := strings.Split(strings.TrimSpace(evidence), "\n")
+	newAlertsCount := 0
 
-		// 3. 更新事件的统计信息
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		// 指纹计算基于规则ID和该单条日志内容
+		fp := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%d-%s", rule.ID, line))))
+		
+		var count int64
+		db.Model(&model.Alert{}).Where("fingerprint = ?", fp).Count(&count)
+		
+		if count == 0 {
+			alert := model.Alert{
+				IncidentID:  incident.ID,
+				RuleID:      rule.ID,
+				Content:     line,
+				Fingerprint: fp,
+			}
+			db.Create(&alert)
+			newAlertsCount++
+		}
+	}
+
+	// 仅当产生新告警证据时，才更新 Incident 计数并触发 SOAR 剧本
+	if newAlertsCount > 0 {
 		db.Model(&incident).Updates(map[string]interface{}{
-			"alert_count": incident.AlertCount + 1,
+			"alert_count": incident.AlertCount + newAlertsCount,
 			"last_seen":   now,
 		})
+		go automation.DispatchByIncident(incident)
 	}
-	go automation.DispatchByIncident(incident)
 }

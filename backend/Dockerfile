@@ -1,10 +1,10 @@
 # Build stage - Build both VSentry and redAgent collectors
-FROM golang:1.21-alpine AS builder
+FROM golang:1.25-bookworm AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache git gcc musl-dev
+# Install build dependencies for cross-compilation
+RUN apt-get update && apt-get install -y --no-install-recommends git gcc libc6-dev gcc-mingw-w64 && rm -rf /var/lib/apt/lists/*
 
 # Copy go mod files for main app
 COPY backend/go.mod backend/go.sum ./
@@ -14,7 +14,8 @@ RUN go mod download
 COPY backend/ backend/
 
 # Build main VSentry application
-RUN CGO_ENABLED=1 GOOS=linux go build -o vsentry ./backend
+WORKDIR /app/backend
+RUN CGO_ENABLED=1 GOOS=linux go build -o vsentry .
 
 # Build redAgent collector for Windows
 WORKDIR /app/backend/cmd/redAgent
@@ -24,10 +25,10 @@ RUN go mod download && \
 # Build redAgent collector for Linux
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o redAgent .
 
-# Final stage
-FROM alpine:latest
+# Final stage - use debian slim for compatibility
+FROM debian:bookworm-slim
 
-RUN apk --no-cache add ca-certificates tzdata
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
