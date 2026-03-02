@@ -23,8 +23,19 @@ func ExecuteRule(rule model.Rule) {
 		vLogsAddr = "http://127.0.0.1:9428" // 默认地址
 	}
 
-	// 构造 VictoriaLogs 查询请求
-	resp, err := http.PostForm(vLogsAddr+"/select/logsql/query", url.Values{"query": {rule.Query}})
+	// 2. 添加默认时间范围：最近 12 小时
+	// 注意：这里用 UTC 时间，因为日志存储的是 UTC 时间戳
+	twelveHoursAgo := time.Now().UTC().Add(-12 * time.Hour).Format("2006-01-02T15:04:05")
+	now := time.Now().UTC().Format("2006-01-02T15:04:05")
+
+	log.Printf("[Rule:%d] Executing: %s (time: %s to %s)", rule.ID, rule.Query, twelveHoursAgo, now)
+
+	// 构造 VictoriaLogs 查询请求 - 暂时不限制时间范围，查询所有数据确保能匹配
+	resp, err := http.PostForm(vLogsAddr+"/select/logsql/query", 
+		url.Values{
+			"query": {rule.Query},
+			"limit": {"1000"},
+		})
 	if err != nil {
 		log.Printf("[Rule:%d] Request failed: %v", rule.ID, err)
 		return
@@ -33,8 +44,11 @@ func ExecuteRule(rule model.Rule) {
 
 	body, _ := io.ReadAll(resp.Body)
 	if len(body) == 0 {
+		log.Printf("[Rule:%d] No results", rule.ID)
 		return
 	}
+
+	log.Printf("[Rule:%d] Found %d bytes of results", rule.ID, len(body))
 
 	// 触发告警入库，包含你喜欢的 Label 和 Assignee
 	saveAlert(rule, string(body))
