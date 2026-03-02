@@ -43,34 +43,46 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 
 ## 📸 Screenshots
 
+### 1. Dashboard - 安全总览
 <p align="center">
   <img src="docs/screenshots/readme-dashboard.png" alt="Dashboard" width="800">
-  <br><em>Dashboard - Security Overview</em>
+  <br><em>实时安全态势感知，展示告警数量、严重程度分布、最近活动等关键指标</em>
 </p>
 
+### 2. Logs - 日志查询与分析
 <p align="center">
   <img src="docs/screenshots/readme-logs.png" alt="Logs" width="800">
-  <br><em>Logs - Search and analyze logs with LogSQL</em>
+  <br><em>基于 LogSQL 的强大日志查询，支持时间范围过滤、实时搜索、JSON/表格/分组多种视图</em>
 </p>
 
+### 3. Rules - 检测规则管理
 <p align="center">
   <img src="docs/screenshots/readme-rules.png" alt="Rules" width="800">
-  <br><em>Rules - Detection rules with cron scheduling</em>
+  <br><em>创建和管理检测规则，支持 Cron 定时调度、规则模板、启用/禁用控制</em>
 </p>
 
+### 4. Incidents - 事件管理
 <p align="center">
   <img src="docs/screenshots/readme-incidents.png" alt="Incidents" width="800">
-  <br><em>Incidents - Track and manage security incidents</em>
+  <br><em>安全事件全生命周期管理，支持分配、确认、处理、分类等操作</em>
 </p>
 
+### 5. Automation - SOAR 自动化编排
 <p align="center">
   <img src="docs/screenshots/readme-automation.png" alt="Automation" width="800">
-  <br><em>Automation - SOAR workflow with React Flow</em>
+  <br><em>可视化剧本编排，连接检测规则与响应动作，支持 HTTP、邮件、条件分支等动作</em>
 </p>
 
+### 6. Collectors - 日志采集器
+<p align="center">
+  <img src="docs/screenshots/readme-collectors.png" alt="Collectors" width="800">
+  <br><em>构建跨平台日志采集器（Windows/Linux/macOS），一键生成配置文件</em>
+</p>
+
+### 7. Settings - 系统配置
 <p align="center">
   <img src="docs/screenshots/readme-settings.png" alt="Settings" width="800">
-  <br><em>Settings - Configure system and collectors</em>
+  <br><em>系统管理：用户管理、采集器配置、接入点管理、外观设置</em>
 </p>
 
 ## 🏗️ Architecture
