@@ -26,8 +26,10 @@ func GetDashboard(ctx *gin.Context) {
 	stats.SeverityCounts = make(map[string]int64)
 
 	// 1. 内部告警统计
-	db.Model(&model.Alert{}).Count(&stats.TotalAlerts)
-	db.Model(&model.Alert{}).Where("status = ?", "New").Count(&stats.NewAlerts)
+	db.Model(&model.Incident{}).Count(&stats.TotalAlerts)
+	var newIncidents int64
+	// 现在我们统计的是状态为 new 的安全事件 (Incident)
+	db.Model(&model.Incident{}).Where("status = ?", "new").Count(&newIncidents)
 
 	// 2. 获取并解析 VictoriaLogs 原始 Metrics
 	stats.VLogsMetrics = fetchAndParseVLogsMetrics()

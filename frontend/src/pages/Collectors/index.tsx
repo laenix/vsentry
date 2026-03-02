@@ -52,13 +52,16 @@ export default function CollectorsPage() {
   const [availableSources, setAvailableSources] = useState<DataSource[]>([]);
   const [activeTab, setActiveTab] = useState<string>("templates");
 
+  // 【核心修改】：默认 stream_fields 适配 OCSF 规范
+  const defaultStreamFields = "observer.hostname,observer.vendor,class_uid";
+
   const [formData, setFormData] = useState({
     name: "",
     type: "windows",
     channels: "",
-    sources: "", // JSON string of sources for Linux
+    sources: "", // JSON string of sources for all OS
     ingest_id: 0,
-    stream_fields: "channel,source,host",
+    stream_fields: defaultStreamFields,
     interval: 5,
   });
 
@@ -90,43 +93,50 @@ export default function CollectorsPage() {
     fetchData();
   }, []);
 
-  // Fetch available sources when type changes
-  useEffect(() => {
-    const fetchSources = async () => {
-      try {
-        const res = await collectorService.getSources(formData.type);
-        if (res.code === 200 && res.data) {
-          // Handle both array of strings and array of objects
-          const data = res.data;
-          if (Array.isArray(data) && data.length > 0) {
-            if (typeof data[0] === 'string') {
-              // Legacy format: array of strings
-              setAvailableChannels(data as string[]);
-              setAvailableSources([]);
-            } else {
-              // New format: array of {type, path, label}
-              const sources = (data as any[]).map((item: any) => ({
-                type: item.type || item.Type || '',
-                path: item.path || item.Path || '',
-                label: item.label || item.Label || item.type || '',
-                enabled: false,
-              }));
-              setAvailableSources(sources);
-              setAvailableChannels([]);
+  // 【核心修改】：带回显状态的 Sources 抓取逻辑
+  const fetchSourcesForType = async (type: string, savedSourcesStr?: string) => {
+    try {
+      const res = await collectorService.getSources(type);
+      if (res.code === 200 && res.data) {
+        const data = res.data;
+        if (Array.isArray(data) && data.length > 0) {
+          if (typeof data[0] === 'string') {
+            setAvailableChannels(data as string[]);
+            setAvailableSources([]);
+          } else {
+            // 解析已保存的 JSON 以恢复 Checkbox 选中状态
+            const savedSourcesMap = new Map();
+            if (savedSourcesStr) {
+              try {
+                const parsed = JSON.parse(savedSourcesStr);
+                parsed.forEach((s: any) => savedSourcesMap.set(s.type || s.path, s.enabled));
+              } catch (e) {}
             }
+
+            const sources = (data as any[]).map((item: any) => ({
+              type: item.type || item.Type || '',
+              path: item.path || item.Path || '',
+              label: item.label || item.Label || item.type || '',
+              enabled: savedSourcesMap.has(item.type || item.path) ? savedSourcesMap.get(item.type || item.path) : false,
+            }));
+            setAvailableSources(sources);
+            setAvailableChannels([]);
           }
         }
-      } catch (err) {
-        console.error("Failed to fetch sources:", err);
       }
-    };
-    
+    } catch (err) {
+      console.error("Failed to fetch sources:", err);
+    }
+  };
+
+  // 监听 OS 类型切换，重新拉取对应平台的支持列表
+  useEffect(() => {
     if (formData.type) {
-      fetchSources();
+      fetchSourcesForType(formData.type, formData.sources);
     }
   }, [formData.type]);
 
-  // Toggle source selection
+  // 切换复选框逻辑，并实时同步为 JSON string
   const toggleSource = (type: string) => {
     const updated = availableSources.map(s => {
       if (s.type === type) {
@@ -136,19 +146,9 @@ export default function CollectorsPage() {
     });
     setAvailableSources(updated);
     
-    // Update formData.sources as JSON
     const enabledSources = updated.filter(s => s.enabled);
     setFormData({ ...formData, sources: JSON.stringify(enabledSources) });
   };
-
-  useEffect(() => {
-    // Fetch available channels when type changes
-    collectorService.channels(formData.type).then(res => {
-      if (res.code === 200) {
-        setAvailableChannels(res.data || []);
-      }
-    });
-  }, [formData.type]);
 
   const getConfigID = (c: CollectorConfig) => c.ID || c.id || 0;
 
@@ -158,28 +158,37 @@ export default function CollectorsPage() {
       setFormData({
         name: config.name,
         type: config.type,
-        channels: config.channels,
+        channels: config.channels || "",
+        sources: config.sources || "", // 载入历史 sources
         ingest_id: config.ingest_id || 0,
-        stream_fields: config.stream_fields || "channel,source,host",
+        stream_fields: config.stream_fields || defaultStreamFields,
+        interval: config.interval || 5,
       });
+      fetchSourcesForType(config.type, config.sources);
     } else if (template) {
       setEditingConfig(null);
       setFormData({
         name: template.name,
         type: template.type,
         channels: template.channels?.join(",") || "",
+        sources: "",
         ingest_id: 0,
-        stream_fields: "channel,source,host",
+        stream_fields: defaultStreamFields,
+        interval: 5,
       });
+      fetchSourcesForType(template.type);
     } else {
       setEditingConfig(null);
       setFormData({
         name: "",
         type: "windows",
         channels: "",
+        sources: "",
         ingest_id: 0,
-        stream_fields: "channel,source,host",
+        stream_fields: defaultStreamFields,
+        interval: 5,
       });
+      fetchSourcesForType("windows");
     }
     setDialogOpen(true);
   };
@@ -221,46 +230,45 @@ export default function CollectorsPage() {
 
   const handleIngestChange = async (ingestId: string) => {
     const id = parseInt(ingestId);
-    setFormData({...formData, ingest_id: id, token: ""});
+    setFormData({...formData, ingest_id: id});
     
-    if (id && id > 0) {
-      try {
-        const res = await collectorService.ingestAuth(id);
-        if (res.code === 200 && res.data?.token) {
-          setFormData(prev => ({...prev, token: res.data.token}));
-        }
-      } catch (e) {
-        console.error("Failed to fetch token", e);
-      }
-    }
+    // We don't necessarily need to fetch the token to show it here since 
+    // the backend will fetch it dynamically during the build process, 
+    // but fetching it for display is fine.
   };
 
+  // 【核心修改】：抛弃 ZIP 解压，直接下发单体二进制文件
   const handleBuild = async (config: CollectorConfig) => {
     try {
-      toast.info("Building collector package...");
+      toast.info("Compiling standalone collector binary...", {
+        description: "This takes 1-2 seconds with our Cloud-Native compiler."
+      });
+      
       const res = await collectorService.build(getConfigID(config));
       
-      // Create download link
       const url = window.URL.createObjectURL(res.data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `collector_${config.name.replace(/\s+/g, '_')}.zip`;
+      
+      // 根据目标系统智能分配后缀名
+      const safeName = config.name.replace(/\s+/g, '_').toLowerCase();
+      const ext = config.type === "windows" ? ".exe" : "";
+      a.download = `vsentry-agent-${safeName}${ext}`;
+      
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      toast.success("Collector package downloaded!");
+      toast.success("Collector compiled and downloaded!", {
+        description: "Zero dependencies. Just drop it onto your server and run."
+      });
       fetchData();
     } catch (err) {
       console.error(err);
-      toast.error("Build failed");
+      toast.error("Compilation failed");
     }
   };
-
-  const filteredTemplates = activeTab === "all" 
-    ? templates 
-    : templates.filter(t => t.type === activeTab);
 
   return (
     <div className="p-6 h-full flex flex-col">
@@ -272,7 +280,7 @@ export default function CollectorsPage() {
               Collectors
             </h1>
             <p className="text-muted-foreground text-sm">
-              Build log collectors for different operating systems.
+              Deploy native, zero-dependency XDR agents tailored for OCSF.
             </p>
           </div>
           <Button onClick={() => handleOpenDialog()}>
@@ -330,7 +338,6 @@ export default function CollectorsPage() {
                     <TableHead className="w-[50px]">ID</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Channels</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -350,21 +357,18 @@ export default function CollectorsPage() {
                           <TableCell>
                             <Badge variant="secondary" className="capitalize">{config.type}</Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground max-w-[200px] truncate">
-                            {config.channels}
-                          </TableCell>
                           <TableCell>
                             {config.build_status === "completed" ? (
-                              <Badge className="bg-green-500">Ready</Badge>
+                              <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Ready to Deploy</Badge>
                             ) : config.build_status === "building" ? (
-                              <Badge className="bg-blue-500">Building</Badge>
+                              <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Compiling...</Badge>
                             ) : (
-                              <Badge variant="secondary">Pending</Badge>
+                              <Badge variant="outline">Pending</Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-right space-x-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleBuild(config)}>
-                              <Download className="w-3.5 h-3.5" />
+                            <Button variant="outline" size="sm" onClick={() => handleBuild(config)}>
+                              <Download className="w-3.5 h-3.5 mr-2" /> Build & Download
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(config)}>
                               <Edit className="w-3.5 h-3.5" />
@@ -379,7 +383,7 @@ export default function CollectorsPage() {
                   ) : (
                     !loading && (
                       <TableRow>
-                        <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                        <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                           No collectors configured. Click a template to start.
                         </TableCell>
                       </TableRow>
@@ -399,7 +403,6 @@ export default function CollectorsPage() {
                 <TableHeader>
                   <TableRow className="bg-muted/5">
                     <TableHead>Name</TableHead>
-                    <TableHead>Channels</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -410,12 +413,13 @@ export default function CollectorsPage() {
                     return (
                       <TableRow key={id}>
                         <TableCell className="font-medium">{config.name}</TableCell>
-                        <TableCell className="font-mono text-xs">{config.channels}</TableCell>
                         <TableCell>
                           {config.build_status === "completed" ? (
-                            <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1"/> Ready</Badge>
+                            <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                              <CheckCircle className="w-3 h-3 mr-1"/> Ready
+                            </Badge>
                           ) : (
-                            <Badge variant="secondary">Pending</Badge>
+                            <Badge variant="outline">Pending</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-right space-x-1">
@@ -431,7 +435,7 @@ export default function CollectorsPage() {
                   })}
                   {configs.filter(c => c.type === osType).length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                      <TableCell colSpan={3} className="h-32 text-center text-muted-foreground">
                         No {osType} collectors. Click Templates to create one.
                       </TableCell>
                     </TableRow>
@@ -443,122 +447,111 @@ export default function CollectorsPage() {
         ))}
       </Tabs>
 
-      {/* Dialog */}
+      {/* Configuration Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
             <DialogTitle>
               {editingConfig ? "Edit Collector" : "Configure Collector"}
             </DialogTitle>
             <DialogDescription>
-              Configure the collector to select source and destination.
+              Deploy a zero-dependency agent that normalizes logs into OCSF standard schema.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
             <div className="grid gap-2">
-              <Label>Name</Label>
-              <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              <Label>Probe Name</Label>
+              <Input 
+                value={formData.name} 
+                onChange={e => setFormData({...formData, name: e.target.value})} 
+                placeholder="e.g. DMZ Web Server Probe"
+              />
             </div>
 
-            <div className="grid gap-2">
-              <Label>Type</Label>
-              <Select value={formData.type} onValueChange={v => setFormData({...formData, type: v})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="windows">Windows</SelectItem>
-                  <SelectItem value="linux">Linux</SelectItem>
-                  <SelectItem value="macos">macOS</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Target OS</Label>
+                <Select value={formData.type} onValueChange={v => setFormData({...formData, type: v, sources: "", channels: ""})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="windows">Windows</SelectItem>
+                    <SelectItem value="linux">Linux</SelectItem>
+                    <SelectItem value="macos">macOS</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label>Target Ingest Node</Label>
+                <Select value={String(formData.ingest_id)} onValueChange={handleIngestChange}>
+                  <SelectTrigger><SelectValue placeholder="Select Receiver..." /></SelectTrigger>
+                  <SelectContent>
+                    {ingests.map(ing => (
+                      <SelectItem key={ing.ID || ing.id} value={String(ing.ID || ing.id)}>{ing.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="grid gap-2">
-              {/* For Linux: Show source checkboxes */}
-              {formData.type === "linux" && availableSources.length > 0 && (
-                <div className="border rounded-md p-3 max-h-[200px] overflow-y-auto">
-                  <Label className="mb-2 block">Select Data Sources to Collect:</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {availableSources.map(source => (
-                      <div key={source.type} className="flex items-center gap-2">
-                        <Checkbox 
-                          id={`source-${source.type}`}
-                          checked={source.enabled}
-                          onCheckedChange={() => toggleSource(source.type)}
-                        />
+            {/* 【核心修改】：全平台统一的结构化 Sources JSON 选择视图 */}
+            {availableSources.length > 0 ? (
+              <div className="border rounded-md p-4 bg-muted/20">
+                <Label className="mb-3 block text-sm font-semibold">Telemetry Sources</Label>
+                <div className="grid grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-2">
+                  {availableSources.map(source => (
+                    <div key={source.type || source.path} className="flex items-start gap-2">
+                      <Checkbox 
+                        id={`source-${source.type}`}
+                        checked={source.enabled}
+                        onCheckedChange={() => toggleSource(source.type)}
+                        className="mt-1"
+                      />
+                      <div className="grid gap-1.5 leading-none">
                         <Label 
                           htmlFor={`source-${source.type}`} 
-                          className="text-sm cursor-pointer font-normal"
-                          title={source.path}
+                          className="text-sm cursor-pointer font-medium"
                         >
                           {source.label}
                         </Label>
+                        <p className="text-xs text-muted-foreground line-clamp-1 break-all" title={source.path}>
+                          {source.path}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Selected: {availableSources.filter(s => s.enabled).map(s => s.label).join(", ") || "none"}
-                  </p>
-                </div>
-              )}
-
-              {/* For Windows: Show old channel input */}
-              {(formData.type === "windows" || availableSources.length === 0) && (
-                <>
-                  <Label>Channels (comma-separated)</Label>
-                  <Input 
-                    value={formData.channels} 
-                    onChange={e => setFormData({...formData, channels: e.target.value})}
-                    placeholder={availableChannels.slice(0, 3).join(", ") || "System,Application,Security"}
-                  />
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {availableChannels.slice(0, 8).map(ch => (
-                      <Badge key={ch} variant="outline" className="text-xs cursor-pointer" onClick={() => {
-                        const current = formData.channels ? formData.channels.split(",").map(s => s.trim()) : [];
-                        if (!current.includes(ch)) {
-                          setFormData({...formData, channels: [...current, ch].join(",")});
-                        }
-                      }}>{ch}</Badge>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* For macOS: Simple placeholder */}
-              {formData.type === "macos" && (
-                <div className="text-sm text-muted-foreground p-3 bg-muted rounded">
-                  macOS collector is coming soon. Use the Windows or Linux option for now.
-                </div>
-              )}
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Ingest (for token)</Label>
-              <Select value={String(formData.ingest_id)} onValueChange={handleIngestChange}>
-                <SelectTrigger><SelectValue placeholder="Select Ingest" /></SelectTrigger>
-                <SelectContent>
-                  {ingests.map(ing => (
-                    <SelectItem key={ing.ID || ing.id} value={String(ing.ID || ing.id)}>{ing.name}</SelectItem>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-              {formData.token && (
-                <p className="text-xs text-muted-foreground">
-                  Token: {formData.token.substring(0, 16)}...
-                </p>
-              )}
-            </div>
+                </div>
+              </div>
+            ) : (
+              // 容错回退机制：当后端没有预设 Source List 时使用老旧输入框
+              <div className="grid gap-2">
+                <Label>Event Channels (Legacy Input)</Label>
+                <Input 
+                  value={formData.channels} 
+                  onChange={e => setFormData({...formData, channels: e.target.value})}
+                  placeholder="Security,System,Application"
+                />
+              </div>
+            )}
 
             <div className="grid gap-2">
-              <Label>Stream Fields</Label>
-              <Input value={formData.stream_fields} onChange={e => setFormData({...formData, stream_fields: e.target.value})} />
+              <Label>OCSF Stream Fields (VictoriaLogs Indexing)</Label>
+              <Input 
+                value={formData.stream_fields} 
+                onChange={e => setFormData({...formData, stream_fields: e.target.value})} 
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Optimizes time-series indexing. Do not change unless you understand VictoriaLogs architecture.
+              </p>
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "Saving..." : editingConfig ? "Update" : "Create"}
+              {submitting ? "Processing..." : editingConfig ? "Save Configuration" : "Create & Initialize"}
             </Button>
           </DialogFooter>
         </DialogContent>
