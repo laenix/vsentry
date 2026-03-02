@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -19,11 +20,29 @@ func QueryVictoriaLogs(ctx *gin.Context) {
 	// 构建目标URL
 	query := ctx.PostForm("query")
 	limit := ctx.PostForm("limit")
+	start := ctx.PostForm("start")
+	end := ctx.PostForm("end")
 
-	targetURL := vlURL + "/select/logsql/query?" + url.Values{
-		"query": {query},
-		"limit": {limit},
-	}.Encode()
+	// 构建查询参数
+	params := url.Values{}
+	if query != "" {
+		params.Set("query", query)
+	}
+	if limit != "" {
+		params.Set("limit", limit)
+	}
+	// VictoriaLogs 需要 ISO 格式时间（不带 Z 后缀）或 Unix 时间戳
+	if start != "" {
+		// 移除 UTC 时区的 Z 后缀
+		start = strings.TrimSuffix(start, "Z")
+		params.Set("start", start)
+	}
+	if end != "" {
+		end = strings.TrimSuffix(end, "Z")
+		params.Set("end", end)
+	}
+
+	targetURL := vlURL + "/select/logsql/query?" + params.Encode()
 
 	// 创建请求
 	req, err := http.NewRequest("POST", targetURL, ctx.Request.Body)
