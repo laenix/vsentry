@@ -1,10 +1,7 @@
-# Build stage - Build both VSentry and redAgent collectors
-FROM golang:1.25-bookworm AS builder
+# Build stage - Build VSentry and collectors
+FROM golang:1.23-bookworm AS builder
 
 WORKDIR /app
-
-# Install build dependencies for cross-compilation
-RUN apt-get update && apt-get install -y --no-install-recommends git gcc libc6-dev gcc-mingw-w64 && rm -rf /var/lib/apt/lists/*
 
 # Copy go mod files for main app
 COPY backend/go.mod backend/go.sum ./
@@ -15,37 +12,31 @@ COPY backend/ backend/
 
 # Build main VSentry application
 WORKDIR /app/backend
-RUN CGO_ENABLED=1 GOOS=linux go build -o vsentry .
+RUN go mod tidy && CGO_ENABLED=0 go build -o vsentry .
 
-# Build redAgent collector for Windows
-WORKDIR /app/backend/cmd/redAgent
-RUN go mod download && \
-    GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -o redAgent.exe .
+# Build collectors for Linux (no CGO needed)
+WORKDIR /app/backend/cmd/collectors
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o vsentry-agent .
 
-# Build redAgent collector for Linux
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o redAgent .
+# Build collectors for Windows (uses syscall, no CGO)
+RUN CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o vsentry-agent.exe .
 
-# Final stage - use debian slim for compatibility
-FROM debian:bookworm-slim
-
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
+# Final stage - use distroless for minimal image
+FROM gcr.io/distroless/static:nonroot
 
 WORKDIR /app
 
-# Copy main app and config
-COPY --from=builder /app/vsentry .
+# Copy main app
+COPY --from=builder /app/backend/vsentry .
+
+# Copy collectors
+COPY --from=builder /app/backend/cmd/collectors/vsentry-agent /app/collector/vsentry-agent
+COPY --from=builder /app/backend/cmd/collectors/vsentry-agent.exe /app/collector/vsentry-agent.exe
+
+# Copy config
 COPY --from=builder /app/backend/config/ ./config/
-
-# Copy redAgent collectors
-RUN mkdir -p /app/collector
-COPY --from=builder /app/backend/cmd/redAgent/redAgent.exe /app/collector/
-COPY --from=builder /app/backend/cmd/redAgent/redAgent /app/collector/
-
-# Copy redAgent source for reference
-COPY --from=builder /app/backend/cmd/redAgent ./redAgent-source/
-
-ENV TZ=UTC
 
 EXPOSE 8088
 
+USER root
 CMD ["./vsentry"]

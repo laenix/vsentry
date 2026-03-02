@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -31,6 +32,14 @@ const typeIcons: Record<string, any> = {
   macos: Activity,
 };
 
+// Data source interface for frontend
+interface DataSource {
+  type: string;
+  path: string;
+  label: string;
+  enabled: boolean;
+}
+
 export default function CollectorsPage() {
   const [configs, setConfigs] = useState<CollectorConfig[]>([]);
   const [templates, setTemplates] = useState<CollectorTemplate[]>([]);
@@ -40,14 +49,17 @@ export default function CollectorsPage() {
   const [editingConfig, setEditingConfig] = useState<CollectorConfig | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [availableChannels, setAvailableChannels] = useState<string[]>([]);
+  const [availableSources, setAvailableSources] = useState<DataSource[]>([]);
   const [activeTab, setActiveTab] = useState<string>("templates");
 
   const [formData, setFormData] = useState({
     name: "",
     type: "windows",
     channels: "",
+    sources: "", // JSON string of sources for Linux
     ingest_id: 0,
     stream_fields: "channel,source,host",
+    interval: 5,
   });
 
   const fetchData = async () => {
@@ -77,6 +89,57 @@ export default function CollectorsPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Fetch available sources when type changes
+  useEffect(() => {
+    const fetchSources = async () => {
+      try {
+        const res = await collectorService.getSources(formData.type);
+        if (res.code === 200 && res.data) {
+          // Handle both array of strings and array of objects
+          const data = res.data;
+          if (Array.isArray(data) && data.length > 0) {
+            if (typeof data[0] === 'string') {
+              // Legacy format: array of strings
+              setAvailableChannels(data as string[]);
+              setAvailableSources([]);
+            } else {
+              // New format: array of {type, path, label}
+              const sources = (data as any[]).map((item: any) => ({
+                type: item.type || item.Type || '',
+                path: item.path || item.Path || '',
+                label: item.label || item.Label || item.type || '',
+                enabled: false,
+              }));
+              setAvailableSources(sources);
+              setAvailableChannels([]);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch sources:", err);
+      }
+    };
+    
+    if (formData.type) {
+      fetchSources();
+    }
+  }, [formData.type]);
+
+  // Toggle source selection
+  const toggleSource = (type: string) => {
+    const updated = availableSources.map(s => {
+      if (s.type === type) {
+        return { ...s, enabled: !s.enabled };
+      }
+      return s;
+    });
+    setAvailableSources(updated);
+    
+    // Update formData.sources as JSON
+    const enabledSources = updated.filter(s => s.enabled);
+    setFormData({ ...formData, sources: JSON.stringify(enabledSources) });
+  };
 
   useEffect(() => {
     // Fetch available channels when type changes
@@ -411,22 +474,62 @@ export default function CollectorsPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label>Channels (comma-separated)</Label>
-              <Input 
-                value={formData.channels} 
-                onChange={e => setFormData({...formData, channels: e.target.value})}
-                placeholder={availableChannels.slice(0, 3).join(", ")}
-              />
-              <div className="flex flex-wrap gap-1 mt-1">
-                {availableChannels.slice(0, 6).map(ch => (
-                  <Badge key={ch} variant="outline" className="text-xs cursor-pointer" onClick={() => {
-                    const current = formData.channels ? formData.channels.split(",").map(s => s.trim()) : [];
-                    if (!current.includes(ch)) {
-                      setFormData({...formData, channels: [...current, ch].join(",")});
-                    }
-                  }}>{ch}</Badge>
-                ))}
-              </div>
+              {/* For Linux: Show source checkboxes */}
+              {formData.type === "linux" && availableSources.length > 0 && (
+                <div className="border rounded-md p-3 max-h-[200px] overflow-y-auto">
+                  <Label className="mb-2 block">Select Data Sources to Collect:</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableSources.map(source => (
+                      <div key={source.type} className="flex items-center gap-2">
+                        <Checkbox 
+                          id={`source-${source.type}`}
+                          checked={source.enabled}
+                          onCheckedChange={() => toggleSource(source.type)}
+                        />
+                        <Label 
+                          htmlFor={`source-${source.type}`} 
+                          className="text-sm cursor-pointer font-normal"
+                          title={source.path}
+                        >
+                          {source.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Selected: {availableSources.filter(s => s.enabled).map(s => s.label).join(", ") || "none"}
+                  </p>
+                </div>
+              )}
+
+              {/* For Windows: Show old channel input */}
+              {(formData.type === "windows" || availableSources.length === 0) && (
+                <>
+                  <Label>Channels (comma-separated)</Label>
+                  <Input 
+                    value={formData.channels} 
+                    onChange={e => setFormData({...formData, channels: e.target.value})}
+                    placeholder={availableChannels.slice(0, 3).join(", ") || "System,Application,Security"}
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {availableChannels.slice(0, 8).map(ch => (
+                      <Badge key={ch} variant="outline" className="text-xs cursor-pointer" onClick={() => {
+                        const current = formData.channels ? formData.channels.split(",").map(s => s.trim()) : [];
+                        if (!current.includes(ch)) {
+                          setFormData({...formData, channels: [...current, ch].join(",")});
+                        }
+                      }}>{ch}</Badge>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* For macOS: Simple placeholder */}
+              {formData.type === "macos" && (
+                <div className="text-sm text-muted-foreground p-3 bg-muted rounded">
+                  macOS collector is coming soon. Use the Windows or Linux option for now.
+                </div>
+              )}
             </div>
 
             <div className="grid gap-2">

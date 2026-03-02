@@ -23,10 +23,11 @@ type AgentConfig struct {
 }
 
 type SourceConfig struct {
-	Type    string `json:"type"`
-	Path    string `json:"path"`
-	Format  string `json:"format"`
-	Enabled bool   `json:"enabled"`
+	Type         string `json:"type"`
+	Path         string `json:"path"`
+	Format       string `json:"format"`
+	Enabled      bool   `json:"enabled"`
+	ReadFromHead bool   `json:"read_from_head"` // 新增：是否收集历史存量日志
 }
 
 var Global AgentConfig

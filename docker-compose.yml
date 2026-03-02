@@ -17,8 +17,8 @@ services:
   # VSentry Backend (with embedded frontend)
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     container_name: vsentry-backend
     ports:
       - "8088:8088"

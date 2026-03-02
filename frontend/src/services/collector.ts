@@ -10,6 +10,8 @@ export interface CollectorConfig {
   template_id?: number;
   type: string;
   channels: string;
+  sources?: string; // JSON string of sources for Linux
+  interval?: number;
   ingest_id?: number;
   endpoint?: string;
   token?: string;
@@ -40,6 +42,9 @@ export const collectorService = {
   templates: () => apiClient.get<any, APIResponse<CollectorTemplate[]>>("/collectors/templates"),
   
   channels: (type: string) => apiClient.get<any, APIResponse<string[]>>(`/collectors/channels?type=${type}`),
+  
+  // Get available data sources for a collector type (returns array of {type, path, label})
+  getSources: (type: string) => apiClient.get<any, APIResponse<any[]>>(`/collectors/channels?type=${type}`),
   
   add: (data: Partial<CollectorConfig>) => apiClient.post("/collectors/add", data),
   

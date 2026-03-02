@@ -3,15 +3,15 @@
 package collector
 
 import (
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"strconv"
 	"syscall"
 	"time"
 	"unsafe"
 
 	"github.com/laenix/vsentry/cmd/collectors/config"
-	"github.com/laenix/vsentry/cmd/collectors/ingest"
+	"github.com/laenix/vsentry/pkg/ocsf"
 )
 
 var (
@@ -27,7 +27,6 @@ const (
 	EvtRenderEventXml   = 1
 )
 
-// WinEventXml 用于映射底层 EvtRender 输出的 XML 数据
 type WinEventXml struct {
 	System struct {
 		Provider struct {
@@ -53,27 +52,23 @@ type WindowsCollector struct {
 	cfg config.AgentConfig
 }
 
-// NewOsCollector 暴露给 main 函数调用
 func NewOsCollector(cfg config.AgentConfig) (Collector, error) {
 	return &WindowsCollector{cfg: cfg}, nil
 }
 
-func (c *WindowsCollector) Collect() ([]ingest.LogEntry, error) {
-	var allLogs []ingest.LogEntry
+func (c *WindowsCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
+	var allLogs []ocsf.VSentryOCSFEvent
 
 	for _, source := range c.cfg.Sources {
 		if !source.Enabled {
 			continue
 		}
 
-		// 核心突破：使用 EvtQuery 的原生 XPath 语法，按毫秒级精确时间差拉取增量日志
-		// timediff(@SystemTime) 计算的是事件发生时间与当前系统的毫秒差值
 		queryStr := fmt.Sprintf(`*[System[TimeCreated[timediff(@SystemTime) <= %d]]]`, (c.cfg.Interval+2)*1000)
 
 		channel16, _ := syscall.UTF16PtrFromString(source.Path)
 		query16, _ := syscall.UTF16PtrFromString(queryStr)
 
-		// 调用 Win32 API: EvtQuery
 		handle, _, _ := procEvtQuery.Call(
 			0,
 			uintptr(unsafe.Pointer(channel16)),
@@ -82,7 +77,7 @@ func (c *WindowsCollector) Collect() ([]ingest.LogEntry, error) {
 		)
 
 		if handle == 0 {
-			continue // 找不到 Channel 或没有权限 (如 Security 需管理员)
+			continue
 		}
 
 		events := c.fetchEvents(handle, source)
@@ -93,18 +88,17 @@ func (c *WindowsCollector) Collect() ([]ingest.LogEntry, error) {
 	return allLogs, nil
 }
 
-func (c *WindowsCollector) fetchEvents(handle uintptr, source config.SourceConfig) []ingest.LogEntry {
-	var logs []ingest.LogEntry
+func (c *WindowsCollector) fetchEvents(handle uintptr, source config.SourceConfig) []ocsf.VSentryOCSFEvent {
+	var logs []ocsf.VSentryOCSFEvent
 	var events [10]uintptr
 	var returned uint32
 
 	for {
-		// 每次抓取 10 条事件句柄
 		ret, _, _ := procEvtNext.Call(
 			handle,
 			uintptr(10),
 			uintptr(unsafe.Pointer(&events[0])),
-			uintptr(2000), // 超时 2000ms
+			uintptr(2000),
 			uintptr(0),
 			uintptr(unsafe.Pointer(&returned)),
 		)
@@ -115,13 +109,9 @@ func (c *WindowsCollector) fetchEvents(handle uintptr, source config.SourceConfi
 
 		for i := 0; i < int(returned); i++ {
 			var bufferUsed, propCount uint32
-
-			// 第一次 Call 获取所需内存 Buffer 大小
 			procEvtRender.Call(0, events[i], uintptr(EvtRenderEventXml), 0, 0, uintptr(unsafe.Pointer(&bufferUsed)), uintptr(unsafe.Pointer(&propCount)))
 
 			buf := make([]uint16, bufferUsed)
-
-			// 第二次 Call 执行真正的 XML 渲染写入内存
 			procEvtRender.Call(0, events[i], uintptr(EvtRenderEventXml), uintptr(bufferUsed), uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&bufferUsed)), uintptr(unsafe.Pointer(&propCount)))
 
 			xmlStr := syscall.UTF16ToString(buf)
@@ -135,7 +125,7 @@ func (c *WindowsCollector) fetchEvents(handle uintptr, source config.SourceConfi
 	return logs
 }
 
-func (c *WindowsCollector) parseXmlToLog(xmlStr string, source config.SourceConfig) *ingest.LogEntry {
+func (c *WindowsCollector) parseXmlToLog(xmlStr string, source config.SourceConfig) *ocsf.VSentryOCSFEvent {
 	var evt WinEventXml
 	if err := xml.Unmarshal([]byte(xmlStr), &evt); err != nil {
 		return nil
@@ -146,41 +136,102 @@ func (c *WindowsCollector) parseXmlToLog(xmlStr string, source config.SourceConf
 		t = time.Now().UTC()
 	}
 
-	// 将底层杂乱的 EventData 整理为 SIEM LogSQL 最喜欢的结构化 JSON
-	extraData := map[string]interface{}{
-		"event_id": evt.System.EventID,
-		"provider": evt.System.Provider.Name,
+	sevName, sevID := c.mapLevel(evt.System.Level)
+
+	entry := &ocsf.VSentryOCSFEvent{
+		Time:         t.Format(time.RFC3339),
+		CategoryName: ocsf.CategorySystem,
+		ClassName:    "System Event",
+		ClassUID:     1000,
+		Severity:     sevName,
+		SeverityID:   sevID,
+		RawData:      xmlStr,
+		Metadata:     &ocsf.Metadata{Product: evt.System.Provider.Name}, // 修复点：Product 放进 Metadata
+		Observer: &ocsf.Device{
+			Hostname: c.cfg.Hostname,
+			Vendor:   "Microsoft",
+			OS:       &ocsf.OS{Type: "windows"},
+		},
+		Unmapped: map[string]interface{}{
+			"event_id": evt.System.EventID,
+			"channel":  evt.System.Channel,
+		},
 	}
-	for _, d := range evt.EventData.Data {
-		if d.Name != "" {
-			extraData[d.Name] = d.Value
+
+	getVal := func(name string) string {
+		for _, d := range evt.EventData.Data {
+			if d.Name == name {
+				return d.Value
+			}
 		}
+		return ""
 	}
 
-	// 由于拿不到本地化翻译的长句（比如“系统已从异常关机中恢复”），将 JSON 实体序列化为 Message
-	msgBytes, _ := json.Marshal(extraData)
+	switch evt.System.EventID {
+	case 4624, 4625, 4634:
+		entry.CategoryName = ocsf.CategoryIdentity
+		entry.ClassName = "Authentication"
+		entry.ClassUID = ocsf.ClassAuthentication
 
-	return &ingest.LogEntry{
-		Time:    t.Format(time.RFC3339),
-		Host:    c.cfg.Hostname,
-		Source:  source.Type,
-		Channel: evt.System.Channel,
-		Message: string(msgBytes),
-		Level:   c.mapLevel(evt.System.Level),
-		Extra:   extraData,
+		entry.SrcEndpoint = &ocsf.Endpoint{IP: getVal("IpAddress")}
+		if port, err := strconv.Atoi(getVal("IpPort")); err == nil && port > 0 {
+			entry.SrcEndpoint.Port = port
+		}
+
+		entry.Target = &ocsf.User{
+			Name:   getVal("TargetUserName"),
+			Domain: getVal("TargetDomainName"),
+		}
+
+		if evt.System.EventID == 4625 {
+			entry.ActivityName = ocsf.ActionLogonFailed
+			entry.Severity = ocsf.SeverityMedium
+			entry.SeverityID = ocsf.SeverityIDMedium
+		} else if evt.System.EventID == 4624 {
+			entry.ActivityName = ocsf.ActionLogon
+			entry.Severity = ocsf.SeverityInfo
+			entry.SeverityID = ocsf.SeverityIDInfo
+		} else {
+			entry.ActivityName = ocsf.ActionLogoff
+			entry.Severity = ocsf.SeverityInfo
+			entry.SeverityID = ocsf.SeverityIDInfo
+		}
+
+	case 4688, 1:
+		entry.CategoryName = ocsf.CategorySystem
+		entry.ClassName = "Process Activity"
+		entry.ClassUID = ocsf.ClassProcessActivity
+		entry.ActivityName = ocsf.ActionCreate
+
+		procName := getVal("NewProcessName")
+		if procName == "" {
+			procName = getVal("Image")
+		}
+
+		entry.Process = &ocsf.Process{
+			Name:    procName,
+			CmdLine: getVal("CommandLine"),
+		}
+
+		userName := getVal("SubjectUserName")
+		if userName == "" {
+			userName = getVal("User")
+		}
+		entry.Actor = &ocsf.User{Name: userName}
 	}
+
+	return entry
 }
 
-func (c *WindowsCollector) mapLevel(level int) string {
-	// Win32 API 的严重程度映射: 1=Critical, 2=Error, 3=Warning, 4=Info
+func (c *WindowsCollector) mapLevel(level int) (string, int) {
 	switch level {
 	case 1:
-		return "critical"
+		return ocsf.SeverityCritical, ocsf.SeverityIDCritical
 	case 2:
-		return "error"
+		return ocsf.SeverityHigh, ocsf.SeverityIDHigh // 修复点：Error 映射为 High
 	case 3:
-		return "warning"
+		return ocsf.SeverityMedium, ocsf.SeverityIDMedium // 修复点：Warning 映射为 Medium
 	default:
-		return "info"
+		return ocsf.SeverityInfo, ocsf.SeverityIDInfo
 	}
 }

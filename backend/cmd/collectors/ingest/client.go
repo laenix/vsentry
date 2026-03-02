@@ -6,18 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-)
 
-// LogEntry 统一规范采集上来的数据结构
-type LogEntry struct {
-	Time    string                 `json:"_time"`
-	Host    string                 `json:"host"`
-	Source  string                 `json:"source"`
-	Channel string                 `json:"channel"`
-	Message string                 `json:"message"`
-	Level   string                 `json:"level"`
-	Extra   map[string]interface{} `json:"extra,omitempty"`
-}
+	"github.com/laenix/vsentry/pkg/ocsf" // 引入标准契约
+)
 
 type Client struct {
 	endpoint   string
@@ -26,7 +17,6 @@ type Client struct {
 }
 
 func NewClient(endpoint, token, streamFields string) *Client {
-	// 将 streamFields 自动拼接到 URL 中
 	if len(streamFields) > 0 {
 		endpoint = fmt.Sprintf("%s?_stream_fields=%s", endpoint, streamFields)
 	}
@@ -35,13 +25,13 @@ func NewClient(endpoint, token, streamFields string) *Client {
 		endpoint: endpoint,
 		token:    token,
 		httpClient: &http.Client{
-			Timeout: 15 * time.Second, // 防止网络拥塞导致协程卡死
+			Timeout: 15 * time.Second,
 		},
 	}
 }
 
-// SendBatch 批量发送日志，返回成功和失败的数量
-func (c *Client) SendBatch(logs []LogEntry) (success int, failed int) {
+// SendBatch 的签名改为接收 OCSF 事件数组
+func (c *Client) SendBatch(logs []ocsf.VSentryOCSFEvent) (success int, failed int) {
 	if len(logs) == 0 {
 		return 0, 0
 	}
