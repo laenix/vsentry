@@ -1,5 +1,9 @@
 # VSentry - SIEM + SOAR Platform
 
+<p align="right">
+  <a href="README.zh-CN.md">中文版</a>
+</p>
+
 <p align="center">
   <a href="https://github.com/laenix/vsentry">
     <img src="https://img.shields.io/github/stars/laenix/vsentry?style=social" alt="Stars">
