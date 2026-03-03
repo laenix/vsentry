@@ -5,31 +5,32 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  ShieldAlert, Clock, Database, 
-  User, Activity, Info, ExternalLink 
+import {
+  ShieldAlert, Clock, Database,
+  User, Activity, Info, ExternalLink, Target
 } from "lucide-react";
 import { incidentService } from "@/services/incidents";
 import type { Incident } from "@/services/incidents";
 import { ReadOnlyJsonViewer } from "@/components/editor/ReadOnlyJsonViewer";
 import { toast } from "sonner";
+import { useTabStore } from "@/stores/tab-store";
 
 // 1. 接口定义：对齐 Go 后端结构
 interface Alert {
   id: number;
   // 兼容多种时间字段格式 (Go CreatedAt 或 JSON _time)
-  created_at?: string; 
+  created_at?: string;
   CreatedAt?: string;
   _time?: string;
-  
+
   content: string;     // 原始 JSON
-  fingerprint: string; 
+  fingerprint: string;
 }
 
 interface IncidentDetail extends Incident {
-  first_seen: string; 
-  last_seen: string; 
-  alerts: Alert[];    
+  first_seen: string;
+  last_seen: string;
+  alerts: Alert[];
 }
 
 interface IncidentDetailDialogProps {
@@ -40,15 +41,16 @@ interface IncidentDetailDialogProps {
   onResolve: (id: number) => void;
 }
 
-export function IncidentDetailDialog({ 
-  open, 
-  onOpenChange, 
-  alertId, 
-  onAcknowledge, 
-  onResolve 
+export function IncidentDetailDialog({
+  open,
+  onOpenChange,
+  alertId,
+  onAcknowledge,
+  onResolve
 }: IncidentDetailDialogProps) {
   const [data, setData] = useState<IncidentDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const { addTab } = useTabStore();
 
   // 1. 加载详情
   useEffect(() => {
@@ -56,7 +58,7 @@ export function IncidentDetailDialog({
       const fetchDetail = async () => {
         setLoading(true);
         try {
-          const res = await incidentService.detail(alertId); 
+          const res = await incidentService.detail(alertId);
           if (res.code === 200) {
             setData(res.data);
           }
@@ -70,20 +72,27 @@ export function IncidentDetailDialog({
       fetchDetail();
     }
   }, [open, alertId]);
-
+  // ✅ 新增：关闭当前详情弹窗，并在后台打开调查 Tab
+  const launchInvestigation = () => {
+    if (!data) return;
+    onOpenChange(false); // 关掉弹窗，让视野更清爽
+    addTab('investigation', `Investigate #${data.ID}`, {
+      incident_id: data.ID
+    });
+  };
   // ✅ 2. 核心：在新窗口打开纯时间范围查询
   const handleInvestigateNewWindow = (alert: Alert) => {
     // A. 智能获取时间
     const timeStr = alert.created_at || alert.CreatedAt || alert._time || new Date().toISOString();
     const eventTime = new Date(timeStr).getTime();
-    
+
     if (isNaN(eventTime)) {
       toast.error("Invalid timestamp in evidence");
       return;
     }
 
     // B. 计算前后 5 分钟 (Context Buffer)
-    const BUFFER_MS = 5 * 60 * 1000; 
+    const BUFFER_MS = 5 * 60 * 1000;
     const start = new Date(eventTime - BUFFER_MS).toISOString();
     const end = new Date(eventTime + BUFFER_MS).toISOString();
 
@@ -97,7 +106,7 @@ export function IncidentDetailDialog({
 
     // E. 在新标签页打开
     window.open(url, '_blank');
-    
+
     toast.success("Context investigation opened in new tab");
   };
 
@@ -107,7 +116,7 @@ export function IncidentDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* 布局修复: 固定高度 + Flex Column 确保滚动条正常工作 */}
       <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-        
+
         {/* Header: 仅展示信息 */}
         <DialogHeader className="px-6 py-4 border-b bg-muted/10 flex-none">
           <div className="flex justify-between items-start">
@@ -120,37 +129,43 @@ export function IncidentDetailDialog({
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <span className="font-mono">ID: #{data.ID}</span>
                 <span className="flex items-center gap-1">
-                  <User className="w-3 h-3"/> {data.assignee ? `Assignee: #${data.assignee}` : 'Unassigned'}
+                  <User className="w-3 h-3" /> {data.assignee ? `Assignee: #${data.assignee}` : 'Unassigned'}
                 </span>
                 <span className="flex items-center gap-1">
-                   <Clock className="w-3 h-3"/> First Seen: {new Date(data.first_seen || Date.now()).toLocaleTimeString()}
+                  <Clock className="w-3 h-3" /> First Seen: {new Date(data.first_seen || Date.now()).toLocaleTimeString()}
                 </span>
               </div>
             </div>
-            {/* 顶部的全局 Investigate Logs 按钮已移除 */}
+            <Button 
+              className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm" 
+              onClick={launchInvestigation}
+            >
+              <Target className="w-4 h-4 mr-2" />
+              Launch Deep Investigation
+            </Button>
           </div>
         </DialogHeader>
 
         {/* Scrollable Content */}
         <ScrollArea className="flex-1 bg-muted/5">
           <div className="p-6 space-y-8 max-w-4xl mx-auto">
-            
+
             {/* 统计概览卡片 */}
             <div className="grid grid-cols-3 gap-4">
-              <SummaryCard 
-                icon={<Activity className="w-4 h-4 text-blue-500" />} 
-                label="Alert Count" 
-                value={`${data.alert_count} Evidence Items`} 
+              <SummaryCard
+                icon={<Activity className="w-4 h-4 text-blue-500" />}
+                label="Alert Count"
+                value={`${data.alert_count} Evidence Items`}
               />
-              <SummaryCard 
-                icon={<Clock className="w-4 h-4 text-orange-500" />} 
-                label="Last Seen" 
-                value={new Date(data.last_seen || Date.now()).toLocaleString()} 
+              <SummaryCard
+                icon={<Clock className="w-4 h-4 text-orange-500" />}
+                label="Last Seen"
+                value={new Date(data.last_seen || Date.now()).toLocaleString()}
               />
-              <SummaryCard 
-                icon={<Info className="w-4 h-4 text-purple-500" />} 
-                label="Type" 
-                value={data.label || "Security Alert"} 
+              <SummaryCard
+                icon={<Info className="w-4 h-4 text-purple-500" />}
+                label="Type"
+                value={data.label || "Security Alert"}
               />
             </div>
 
@@ -159,7 +174,7 @@ export function IncidentDetailDialog({
               <h3 className="text-sm font-bold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
                 <Database className="w-4 h-4" /> Evidence Timeline
               </h3>
-              
+
               <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
                 {data.alerts && data.alerts.length > 0 ? (
                   data.alerts.map((alert, index) => {
@@ -170,23 +185,23 @@ export function IncidentDetailDialog({
                       <div key={alert.id || index} className="relative flex items-start gap-6 group">
                         {/* 左侧圆点 */}
                         <div className="absolute left-5 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-primary bg-background group-hover:scale-125 transition-transform z-10" />
-                        
+
                         <div className="flex-1 ml-10 space-y-2">
                           {/* Alert Header: 包含行内操作按钮 */}
                           <div className="flex items-center justify-between bg-card border rounded-t-md p-2 px-3 shadow-sm group-hover:border-primary/30 transition-colors">
                             <div className="flex items-center gap-3">
-                                <Badge variant="secondary" className="font-mono text-[10px] h-5">
-                                  #{alert.id || index + 1}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Clock className="w-3 h-3" /> {displayTime}
-                                </span>
+                              <Badge variant="secondary" className="font-mono text-[10px] h-5">
+                                #{alert.id || index + 1}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> {displayTime}
+                              </span>
                             </div>
 
                             {/* ✅ 行内按钮：打开新窗口查询上下文 */}
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="h-6 text-[10px] gap-1.5 hover:bg-blue-50 hover:text-blue-600"
                               onClick={() => handleInvestigateNewWindow(alert)}
                             >
@@ -194,12 +209,12 @@ export function IncidentDetailDialog({
                               Open Context
                             </Button>
                           </div>
-                          
+
                           {/* JSON Viewer */}
                           <div className="border border-t-0 rounded-b-md overflow-hidden shadow-sm">
-                            <ReadOnlyJsonViewer 
-                              value={alert.content} 
-                              height="200px" 
+                            <ReadOnlyJsonViewer
+                              value={alert.content}
+                              height="200px"
                               className="border-none"
                             />
                           </div>
@@ -219,6 +234,11 @@ export function IncidentDetailDialog({
 
         {/* Footer */}
         <DialogFooter className="px-6 py-4 border-t bg-muted/10 flex-none gap-2">
+        
+        <Button variant="outline" className="text-purple-600 border-purple-200 hover:bg-purple-50 mr-auto" onClick={launchInvestigation}>
+             <Target className="w-4 h-4 mr-2" /> Open in Investigation Canvas
+          </Button>
+
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close Review</Button>
           {data.status === 'new' && (
             <Button onClick={() => onAcknowledge(data.ID)}>

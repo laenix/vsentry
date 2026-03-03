@@ -6,7 +6,7 @@ const API_BASE_URL = "/api";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
 });
 
 // 2. 请求拦截器：自动携带 Token

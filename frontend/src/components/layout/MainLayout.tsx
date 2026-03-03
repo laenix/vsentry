@@ -10,7 +10,9 @@ import {
   Database,
   Settings,
   Activity,
-  Server
+  Server,
+  Target, // ✅ 新增靶心图标
+  Fingerprint // ✅ 为后期的取证功能预留指纹图标
 } from "lucide-react";
 import { useTabStore } from "@/stores/tab-store";
 import type { TabType } from "@/stores/tab-store";
@@ -24,6 +26,8 @@ const MENU_ITEMS: { type: TabType; icon: any; label: string }[] = [
   { type: 'logs', icon: FileText, label: 'Logs Query' },
   { type: 'rules', icon: Shield, label: 'Rules Center' },
   { type: 'incidents', icon: ShieldAlert, label: 'Incidents Center' },
+  { type: 'investigation', icon: Target, label: 'Investigation' }, // ✅ 插入到这里
+  { type: 'forensics', icon: Fingerprint, label: 'Forensics Sandbox' }, // ✅ 顺手把取证也加了
   { type: 'automation', icon: Zap, label: 'Automation' },
   { type: 'ingest', icon: Database, label: 'Ingest' },
   { type: 'collectors', icon: Server, label: 'Collectors' },

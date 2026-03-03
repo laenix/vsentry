@@ -7,6 +7,8 @@ export type TabType =
   | 'overview'     // 总览
   | 'logs'         // 日志查询 (Logs Query)
   | 'incidents'    // 事件中心 (Incidents Center)
+  | 'investigation' // ✅ 新增：调查中心
+  | 'forensics'     // ✅ 新增：取证中心
   | 'rules'        // 规则中心
   | 'automation'   // 自动化
   | 'connectors'   // 集成
@@ -20,7 +22,8 @@ export interface Tab {
   type: TabType
   title: string
   data?: {
-    query?: string     // 专门用于存储日志查询语句
+    query?: string     
+    incident_id?: number // ✅ 新增：允许传递事件ID作为上下文
     [key: string]: any
   }
 }
@@ -40,6 +43,8 @@ const defaultTitles: Record<TabType, string> = {
   overview: 'Overview',
   logs: 'Logs Query',
   incidents: 'Incidents Center',
+  investigation: 'Investigation', // ✅ 新增
+  forensics: 'Forensics Sandbox', // ✅ 新增
   rules: 'Rules Center',
   automation: 'Automation',
   connectors: 'Connectors',
@@ -58,29 +63,17 @@ export const useTabStore = create<TabState>()(
       addTab: (type, title, data) => {
         const state = get()
         
-        // 模式：除了 logs 可能需要多开，其他模块通常只开一个
-        // 如果你希望 logs 也能多开，把 type === 'logs' 这个判断去掉即可
-        const existingTab = state.tabs.find(t => t.type === type)
-
-        if (existingTab) {
-          // 如果标签已存在，则激活它
-          set({ activeTabId: existingTab.id })
-          
-          // 如果传入了新的 data（例如从 Incident 跳转过来的查询语句），则更新该标签
-          if (data) {
-            get().updateTabData(existingTab.id, data)
+        // 允许调查(investigation)和日志(logs)多开
+        // 因为分析师可能同时打开针对不同 Incident 的调查画布
+        if (type !== 'logs' && type !== 'investigation') {
+          const existingTab = state.tabs.find(t => t.type === type)
+          if (existingTab) {
+            set({ activeTabId: existingTab.id })
+            if (data) get().updateTabData(existingTab.id, data)
+            return
           }
-
-          // ✅ 同步 URL：如果是日志查询，更新浏览器地址栏
-          if (type === 'logs' && data?.query) {
-            const url = new URL(window.location.href)
-            url.searchParams.set('q', encodeURIComponent(data.query))
-            window.history.pushState({}, '', url.pathname + url.search)
-          }
-          return
         }
 
-        // 创建新标签
         const newTab: Tab = {
           id: uuidv4(),
           type,
@@ -92,13 +85,6 @@ export const useTabStore = create<TabState>()(
           tabs: [...state.tabs, newTab],
           activeTabId: newTab.id
         }))
-
-        // ✅ 新开标签时同步 URL
-        if (type === 'logs' && data?.query) {
-          const url = new URL(window.location.href)
-          url.searchParams.set('q', encodeURIComponent(data.query))
-          window.history.pushState({}, '', url.pathname + url.search)
-        }
       },
 
       removeTab: (id) => set((state) => {

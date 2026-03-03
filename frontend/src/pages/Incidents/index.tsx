@@ -7,12 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   CheckCircle, Eye, RotateCw, ShieldAlert, CheckCheck, 
-  Archive, Fingerprint, User, Tag, ShieldCheck 
+  Archive, Fingerprint, User, Tag, Target,ShieldCheck 
 } from "lucide-react";
 import { toast } from "sonner";
 import { IncidentDetailDialog } from "./IncidentDetailDialog"; 
 import { IncidentResolveDialog } from "./IncidentResolveDialog";
 import { IncidentAssignDialog } from "./IncidentAssignDialog";
+import { useTabStore } from "@/stores/tab-store";
 
 export default function IncidentsPage() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -26,6 +27,16 @@ export default function IncidentsPage() {
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [assignTarget, setAssignTarget] = useState<Incident | null>(null);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+
+  //
+  const { addTab } = useTabStore();
+  // ✅ 新增：一键启动调查
+  const handleDeepInvestigate = (incident: Incident) => {
+    const id = getIncidentID(incident);
+    addTab('investigation', `Investigate #${id}`, { 
+      incident_id: id 
+    });
+  };
 
   // 获取真实 ID (兼容后端 GORM 默认的大写 ID)
   const getIncidentID = (i: Incident) => i.ID || (i as any).id || 0;
@@ -194,6 +205,16 @@ export default function IncidentsPage() {
 
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-purple-500 hover:text-purple-600 hover:bg-purple-50" 
+                          title="Deep Investigation"
+                          onClick={() => handleDeepInvestigate(incident)}
+                        >
+                          <Target className="w-4 h-4" />
+                        </Button>
+                        
                         <Button variant="ghost" size="icon" onClick={() => { setSelectedIncident(incident); setDetailOpen(true); }}>
                           <Eye className="w-4 h-4" />
                         </Button>

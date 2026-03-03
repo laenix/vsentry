@@ -8,6 +8,7 @@ import DashboardPage from "@/pages/Dashboard"
 import ConnectorsPage from "@/pages/Connectors"
 import RulesPage from "@/pages/Rules"
 import IncidentsPage from "@/pages/Incidents"
+import InvestigationPage from "@/pages/Investigation"
 import AutomationPage from "@/pages/Automation"
 import IngestPage from "@/pages/Ingest"
 import CollectorsPage from "@/pages/Collectors"
@@ -18,19 +19,20 @@ export function TabContent() {
   const { tabs, activeTabId, setActiveTab, removeTab } = useTabStore()
 
   // 2. 根据 Tab 类型映射对应的页面组件
-  const renderContent = (type: string) => {
+  const renderContent = (type: string, tabId: string, tabData: any) => {
     switch (type) {
-      case 'dashboard':    return <DashboardPage />
-      case 'logs':        return <LogsPage />
-      case 'connectors':  return <ConnectorsPage />
-      case 'rules':       return <RulesPage />
-      case 'incidents':   return <IncidentsPage />
-      case 'automation':  return <AutomationPage />
-      case 'ingest':      return <IngestPage />
-      case 'collectors':  return <CollectorsPage />
-      case 'custom-logs': return <CustomLogsPage />
-      case 'settings':    return <SettingsPage />
-      default:            return <DashboardPage />
+      case 'dashboard':     return <DashboardPage />
+      case 'logs':          return <LogsPage />
+      case 'investigation': return <InvestigationPage tabData={tabData} /> // ✅ 把上下文数据传进去
+      case 'rules':         return <RulesPage />
+      case 'incidents':     return <IncidentsPage />
+      case 'automation':    return <AutomationPage />
+      case 'ingest':        return <IngestPage />
+      case 'collectors':    return <CollectorsPage />
+      case 'connectors':    return <ConnectorsPage />
+      case 'custom-logs':   return <CustomLogsPage />
+      case 'settings':      return <SettingsPage />
+      default:              return <DashboardPage />
     }
   }
 
@@ -74,11 +76,11 @@ export function TabContent() {
             key={tab.id}
             className={cn(
               "absolute inset-0 h-full w-full overflow-hidden bg-background",
-              // 关键：通过 display: none 隐藏非活跃标签，从而保持页面内的状态（如编辑器光标、滚动位置）
               activeTabId === tab.id ? "z-10 block" : "z-0 hidden"
             )}
           >
-            {renderContent(tab.type)}
+            {/* ✅ 将 tab.data 传进去 */}
+            {renderContent(tab.type, tab.id, tab.data)}
           </div>
         ))}
         

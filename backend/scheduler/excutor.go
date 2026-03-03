@@ -23,17 +23,14 @@ func ExecuteRule(rule model.Rule) {
 		vLogsAddr = "http://127.0.0.1:9428"
 	}
 
-	// VictoriaLogs 接受 ISO8601 格式，需去除毫秒
-	twelveHoursAgo := time.Now().UTC().Add(-12 * time.Hour).Format("2006-01-02T15:04:05Z")
-	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
-
-	// 【修复1】：强制组合查询语句，注入严格的时间边界
-	finalQuery := fmt.Sprintf("(%s) AND _time:[%s, %s]", rule.Query, twelveHoursAgo, now)
+	// ✅ 核心修正：绝对信任用户的规则！不强加任何额外的时间窗口拼接
+	finalQuery := strings.TrimSpace(rule.Query)
 	log.Printf("[Rule:%d] Executing: %s", rule.ID, finalQuery)
 
+	// 发送给 VictoriaLogs
 	resp, err := http.PostForm(vLogsAddr+"/select/logsql/query", url.Values{
 		"query": {finalQuery},
-		"limit": {"1000"},
+		"limit": {"1000"}, // 在 HTTP API 层面设置兜底 limit，不影响用户的 LogSQL
 	})
 	if err != nil {
 		log.Printf("[Rule:%d] Request failed: %v", rule.ID, err)
@@ -46,12 +43,18 @@ func ExecuteRule(rule model.Rule) {
 		return
 	}
 
+	// ✅ 致命错误拦截：如果 LogSQL 写错了 (如拼写错误)，阻断执行，防止污染数据库
+	if resp.StatusCode >= 400 {
+		log.Printf("[Rule:%d] Query Syntax Error: %s | Query: %s", rule.ID, string(body), finalQuery)
+		return
+	}
+
 	saveAlert(rule, string(body))
 }
 
 func saveAlert(rule model.Rule, evidence string) {
 	db := database.GetDB()
-	now := time.Now()
+	now := time.Now().UTC()
 
 	var incident model.Incident
 	err := db.Where("rule_id = ? AND status != ?", rule.ID, "resolved").
@@ -69,7 +72,7 @@ func saveAlert(rule model.Rule, evidence string) {
 		db.Create(&incident)
 	}
 
-	// 【修复2】：解析 NDJSON，针对每一条原始日志计算独立指纹
+	// 解析 NDJSON，针对每一条原始日志计算独立指纹
 	lines := strings.Split(strings.TrimSpace(evidence), "\n")
 	newAlertsCount := 0
 
