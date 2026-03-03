@@ -110,6 +110,11 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
   <br><em>Windows Event Collector: Native Go agent, zero-dependency deployment, OCSF format output</em>
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/linux-collectors.png" alt="Linux Collector with OCSF" width="800">
+  <br><em>Linux Event Collector: Native Go agent, supports syslog, auditd, and OCSF format output</em>
+</p>
+
 ### 8. Settings
 <p align="center">
   <img src="docs/screenshots/readme-settings.png" alt="Settings" width="800">

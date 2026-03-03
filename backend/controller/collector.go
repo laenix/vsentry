@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/laenix/vsentry/database"
@@ -45,6 +44,14 @@ func GetCollectorTemplates(ctx *gin.Context) {
 			"type":        "macos",
 			"description": "Collect macOS unified logging directly from the Apple log datastore.",
 			"icon":        "apple",
+		},
+		// 【新增】应用层通用采集模板，方便用户在界面上直接选择
+		{
+			"id":          "app_layer",
+			"name":        "Application & Web Logs",
+			"type":        "linux", // 通常跑在 Linux 上，但由于我们的 AppCollector 是跨平台的，其实两边都能跑
+			"description": "Collect Nginx, Apache, Tomcat, MySQL, and Redis logs via file tailing.",
+			"icon":        "server",
 		},
 	}
 	ctx.JSON(200, gin.H{"code": 200, "data": templates})
@@ -106,30 +113,31 @@ func GetAvailableChannels(ctx *gin.Context) {
 		"windows": {
 			{
 				"type": "System", "path": "System", "label": "System",
-				"presets": []map[string]string{
-					{"name": "Service Install", "ids": "7045"},
-				},
+				"presets": []map[string]string{{"name": "Service Install", "ids": "7045"}},
 			},
 			{
 				"type": "Security", "path": "Security", "label": "Security (requires admin)",
 				"presets": []map[string]string{
 					{"name": "Auth & Logon", "ids": "4624, 4625, 4634, 4648"},
 					{"name": "Account Mgmt", "ids": "4720, 4722, 4723, 4724, 4725, 4726"},
+					{"name": "Group Mgmt & Lockout", "ids": "4732, 4733, 4730, 4740"},
 					{"name": "Process Exec", "ids": "4688, 4689"},
+					{"name": "AD/Kerberos", "ids": "4768, 4769, 4771, 4776"},
+					{"name": "Critical & Tampering", "ids": "1102, 4719, 4672, 4765, 4766, 4794"},
 					{"name": "File Access", "ids": "4663"},
+					{"name": "Scheduled Tasks", "ids": "4698, 4699, 4700, 4702"},
 				},
 			},
 			{
 				"type": "PowerShell", "path": "Microsoft-Windows-PowerShell/Operational", "label": "PowerShell",
 				"presets": []map[string]string{
 					{"name": "Script Blocks (Fileless)", "ids": "4104"},
+					{"name": "Module & Runspace", "ids": "4103, 4105, 4106"},
 				},
 			},
 			{
 				"type": "WFP_Network", "path": "Security", "label": "Network Connections (WFP)",
-				"presets": []map[string]string{
-					{"name": "Allowed Connections", "ids": "5156"},
-				},
+				"presets": []map[string]string{{"name": "Allowed Connections", "ids": "5156"}},
 			},
 			{
 				"type": "Sysmon", "path": "Microsoft-Windows-Sysmon/Operational", "label": "Sysmon (Advanced)",
@@ -137,24 +145,38 @@ func GetAvailableChannels(ctx *gin.Context) {
 					{"name": "Process", "ids": "1, 5"},
 					{"name": "Network", "ids": "3"},
 					{"name": "File Activity", "ids": "11, 23"},
+					{"name": "DNS Queries", "ids": "22"},
+					{"name": "Registry Activity", "ids": "12, 13, 14"},
+					{"name": "WMI & Pipe", "ids": "17, 18, 19, 20, 21"},
+					{"name": "Process Injection", "ids": "8, 10"},
 				},
 			},
 			{
 				"type": "Defender", "path": "Microsoft-Windows-Windows Defender/Operational", "label": "Windows Defender",
-				"presets": []map[string]string{
-					{"name": "Malware Detections", "ids": "1116, 1117"},
-				},
+				"presets": []map[string]string{{"name": "Malware Detections", "ids": "1116, 1117"}},
 			},
 		},
-		// Linux 和 macOS 保持简单的文件路径即可，不需要 Event ID 预设
 		"linux": {
-			{"type": "syslog", "path": "/var/log/syslog", "label": "Syslog"},
-			{"type": "auth", "path": "/var/log/auth.log", "label": "Auth Log"},
-			{"type": "secure", "path": "/var/log/secure", "label": "Secure (SSH)"},
+			// OS 层日志
+			{"type": "syslog", "path": "/var/log/syslog", "label": "Syslog (OS)"},
+			{"type": "auth", "path": "/var/log/auth.log", "label": "Auth Log (SSH)"},
+			{"type": "secure", "path": "/var/log/secure", "label": "Secure Log (RedHat)"},
+
+			// 【新增】Web 容器日志
+			{"type": "nginx_access", "path": "/var/log/nginx/access.log", "label": "Nginx Access Log"},
+			{"type": "nginx_error", "path": "/var/log/nginx/error.log", "label": "Nginx Error Log"},
+			{"type": "apache_access", "path": "/var/log/apache2/access.log", "label": "Apache Access Log"},
+			{"type": "apache_error", "path": "/var/log/apache2/error.log", "label": "Apache Error Log"},
+			{"type": "tomcat_access", "path": "/opt/tomcat/logs/localhost_access_log.txt", "label": "Tomcat Access Log"},
+			{"type": "tomcat_catalina", "path": "/opt/tomcat/logs/catalina.out", "label": "Tomcat Catalina Log"},
+
+			// 【新增】数据库日志
+			{"type": "mysql_error", "path": "/var/log/mysql/error.log", "label": "MySQL Error Log"},
+			{"type": "redis_log", "path": "/var/log/redis/redis-server.log", "label": "Redis Log"},
 		},
 		"macos": {
-			{"type": "system", "path": "system", "label": "System Log"},
-			{"type": "network", "path": "system.net", "label": "Network Log"},
+			{"type": "darwin_unified", "path": "system", "label": "macOS System Log"},
+			{"type": "darwin_unified", "path": "system.net", "label": "macOS Network Log"},
 		},
 	}
 
@@ -165,7 +187,15 @@ func GetAvailableChannels(ctx *gin.Context) {
 	}
 }
 
-// BuildCollector 动态编译跨平台采集器
+// 定义编译产物的全局存储目录
+const BuildOutputDir = "./data/builds"
+
+func init() {
+	// 确保程序启动时，构建目录存在
+	os.MkdirAll(BuildOutputDir, 0755)
+}
+
+// BuildCollector 触发编译跨平台采集器 (仅编译，不下载)
 func BuildCollector(ctx *gin.Context) {
 	id := ctx.Query("id")
 	if id == "" {
@@ -182,6 +212,7 @@ func BuildCollector(ctx *gin.Context) {
 
 	var endpoint, token, streamFields string
 
+	// 提取 Ingest 凭证
 	if config.IngestID > 0 {
 		var ingest model.Ingest
 		var auth model.IngestAuth
@@ -194,15 +225,23 @@ func BuildCollector(ctx *gin.Context) {
 		}
 	}
 
-	// 更新状态为构建中
+	// 1. 更新状态为构建中
 	db.Model(&config).Update("build_status", "building")
 
-	// 生成嵌入式 JSON 配置
+	// 2. 生成嵌入式 JSON 配置
 	embeddedConfigJSON := generateEmbeddedJSON(config, endpoint, token, streamFields)
 
-	// 执行动态编译
-	binaryPath, err := compileAgentDynamic(config.Type, embeddedConfigJSON)
+	// 3. 确定最终的持久化文件名和路径
+	fileName := fmt.Sprintf("vsentry-agent-%d-%s", config.ID, config.Type)
+	if config.Type == "windows" {
+		fileName += ".exe"
+	}
+	finalBinaryPath := filepath.Join(BuildOutputDir, fileName)
+
+	// 4. 执行动态编译 (将最终路径传入)
+	err := compileAgentDynamic(config.Type, embeddedConfigJSON, finalBinaryPath)
 	if err != nil {
+		// 编译失败，记录错误日志
 		db.Model(&config).Updates(map[string]interface{}{
 			"build_status": "failed",
 			"build_output": err.Error(),
@@ -210,39 +249,85 @@ func BuildCollector(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"msg": "Compilation failed: " + err.Error()})
 		return
 	}
-	defer os.Remove(binaryPath)
 
+	// 5. 编译成功，更新数据库状态
 	db.Model(&config).Updates(map[string]interface{}{
 		"build_status": "completed",
 		"build_output": "Compilation successful",
 	})
 
-	fileName := fmt.Sprintf("vsentry-agent-%d", config.ID)
+	ctx.JSON(200, gin.H{
+		"code": 200,
+		"msg":  "Build completed successfully",
+		"data": map[string]string{
+			"status": "completed",
+			"file":   fileName,
+		},
+	})
+}
+
+// DownloadCollector 下载已编译的采集器 (纯粹的文件服务器功能)
+func DownloadCollector(ctx *gin.Context) {
+	id := ctx.Query("id")
+	if id == "" {
+		ctx.JSON(400, gin.H{"msg": "ID is required"})
+		return
+	}
+
+	db := database.GetDB()
+	var config model.CollectorConfig
+	if err := db.First(&config, id).Error; err != nil {
+		ctx.JSON(404, gin.H{"msg": "Config not found"})
+		return
+	}
+
+	// 拦截未编译完成的请求
+	if config.BuildStatus != "completed" {
+		ctx.JSON(400, gin.H{"msg": "Agent has not been built successfully yet. Please build it first."})
+		return
+	}
+
+	// 推导文件路径
+	fileName := fmt.Sprintf("vsentry-agent-%d-%s", config.ID, config.Type)
 	if config.Type == "windows" {
 		fileName += ".exe"
 	}
+	finalBinaryPath := filepath.Join(BuildOutputDir, fileName)
 
+	// 检查文件是否存在于磁盘上
+	if _, err := os.Stat(finalBinaryPath); os.IsNotExist(err) {
+		// 修复文件丢失导致的数据库状态不一致
+		db.Model(&config).Update("build_status", "pending")
+		ctx.JSON(404, gin.H{"msg": "Binary file is missing from server disk. Please rebuild."})
+		return
+	}
+
+	// 触发浏览器下载
 	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	ctx.Header("Content-Type", "application/octet-stream")
-	ctx.File(binaryPath)
+	ctx.File(finalBinaryPath)
 }
 
 // compileAgentDynamic 核心编译逻辑
-func compileAgentDynamic(targetOS model.CollectorType, configJSON []byte) (string, error) {
+// targetOS: 目标系统类型; configJSON: 嵌入的配置文件; finalPath: 最终持久化存储的路径
+func compileAgentDynamic(targetOS model.CollectorType, configJSON []byte, finalPath string) error {
 	tempBuildDir, err := os.MkdirTemp("", "vsentry-build-*")
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp dir: %w", err)
+		return fmt.Errorf("failed to create temp dir: %w", err)
 	}
+	// 确保编译结束后清理掉那些占用几百兆空间的临时源码目录
 	defer os.RemoveAll(tempBuildDir)
 
+	// 拷贝源码到沙盒目录
 	copyFile("./go.mod", filepath.Join(tempBuildDir, "go.mod"))
 	copyFile("./go.sum", filepath.Join(tempBuildDir, "go.sum"))
 	copyDir("./pkg", filepath.Join(tempBuildDir, "pkg"))
 	copyDir("./cmd", filepath.Join(tempBuildDir, "cmd"))
 
+	// 注入配置
 	configFilePath := filepath.Join(tempBuildDir, "cmd", "collectors", "config", "config.json")
 	if err := os.WriteFile(configFilePath, configJSON, 0644); err != nil {
-		return "", fmt.Errorf("failed to write embedded config: %w", err)
+		return fmt.Errorf("failed to write embedded config: %w", err)
 	}
 
 	goos := "linux"
@@ -252,32 +337,33 @@ func compileAgentDynamic(targetOS model.CollectorType, configJSON []byte) (strin
 		goos = "darwin"
 	}
 
-	outputFile := filepath.Join(tempBuildDir, "vsentry-agent")
+	outputFile := filepath.Join(tempBuildDir, "vsentry-agent-build")
 	if goos == "windows" {
 		outputFile += ".exe"
 	}
 
+	// 执行 go build
 	cmd := exec.Command("go", "build", "-trimpath", "-ldflags", "-s -w", "-o", outputFile, ".")
 	cmd.Dir = filepath.Join(tempBuildDir, "cmd", "collectors")
+	// 关闭 CGO，确保 Agent 跨平台免依赖 (静态链接)
 	cmd.Env = append(os.Environ(), "GOOS="+goos, "GOARCH=amd64", "CGO_ENABLED=0")
 
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("go build failed: %s\nOutput: %s", err.Error(), string(output))
+		return fmt.Errorf("go build failed: %s\nOutput: %s", err.Error(), string(output))
 	}
 
-	finalPath := filepath.Join(os.TempDir(), fmt.Sprintf("agent_%d_%s", time.Now().UnixNano(), filepath.Base(outputFile)))
+	// 编译成功后，将沙盒中的二进制文件拷贝到永久存储目录
 	if err := copyFile(outputFile, finalPath); err != nil {
-		return "", fmt.Errorf("failed to move compiled binary: %w", err)
+		return fmt.Errorf("failed to move compiled binary to permanent storage: %w", err)
 	}
 
-	return finalPath, nil
+	return nil
 }
 
 // generateEmbeddedJSON 接收从数据库提取的真实配置参数
 func generateEmbeddedJSON(config model.CollectorConfig, endpoint, token, streamFields string) []byte {
 	var sources []map[string]interface{}
 
-	// 【核心修复】：全面拥抱前端发来的 JSON 格式的 Sources，抛弃旧的 Channels 字符串
 	if config.Sources != "" {
 		json.Unmarshal([]byte(config.Sources), &sources)
 	}

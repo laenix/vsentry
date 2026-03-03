@@ -6,32 +6,53 @@ import (
 	"github.com/laenix/vsentry/pkg/ocsf"
 )
 
-// MapFunc 定义了映射函数的签名
+// =========================================================================
+// 1. Windows 字典引擎 (基于 EventID 整数路由)
+// =========================================================================
+
 type MapFunc func(unmapped map[string]interface{}, entry *ocsf.VSentryOCSFEvent)
 
-// registry 是全局的 Event ID 路由表
 var registry = make(map[int]MapFunc)
 
-// Register 供各子模块(如 identity, process)在 init() 中注册自己能处理的 Event ID
 func Register(eventIDs []int, fn MapFunc) {
 	for _, id := range eventIDs {
 		registry[id] = fn
 	}
 }
 
-// Enrich 是供 Windows Collector 调用的入口。
-// 如果找到对应的映射函数，就将原始 XML 提取的 unmapped 数据填充到 OCSF 标准实体中。
 func Enrich(eventID int, unmapped map[string]interface{}, entry *ocsf.VSentryOCSFEvent) {
 	if fn, exists := registry[eventID]; exists {
 		fn(unmapped, entry)
 	}
 }
 
+// =========================================================================
+// 2. Linux/macOS 文本引擎 (基于 SourceType 字符串路由)
+// =========================================================================
+
+// TextMapFunc 针对纯文本日志的映射签名
+type TextMapFunc func(line string, entry *ocsf.VSentryOCSFEvent)
+
+var textRegistry = make(map[string]TextMapFunc)
+
+// RegisterText 供 Linux 子模块注册自己能处理的日志类型 (如 "auth", "syslog")
+func RegisterText(logTypes []string, fn TextMapFunc) {
+	for _, t := range logTypes {
+		textRegistry[t] = fn
+	}
+}
+
+// EnrichText 供 Linux/macOS Collector 调用
+func EnrichText(logType string, line string, entry *ocsf.VSentryOCSFEvent) {
+	if fn, exists := textRegistry[logType]; exists {
+		fn(line, entry)
+	}
+}
+
 // ==========================================
-// 辅助提取工具函数 (供具体的映射文件使用)
+// 辅助提取工具函数
 // ==========================================
 
-// GetStr 安全提取字符串
 func GetStr(m map[string]interface{}, key string) string {
 	if v, ok := m[key].(string); ok {
 		return v
@@ -39,7 +60,6 @@ func GetStr(m map[string]interface{}, key string) string {
 	return ""
 }
 
-// GetInt 安全提取整数
 func GetInt(m map[string]interface{}, key string) int {
 	str := GetStr(m, key)
 	if str == "" {

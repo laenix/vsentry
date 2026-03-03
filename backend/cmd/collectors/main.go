@@ -11,10 +11,11 @@ import (
 	"github.com/laenix/vsentry/cmd/collectors/config"
 	"github.com/laenix/vsentry/cmd/collectors/ingest"
 	"github.com/laenix/vsentry/cmd/collectors/storage"
+	"github.com/laenix/vsentry/pkg/ocsf" // 引入 ocsf 包以定义合并用的事件数组
 )
 
 func main() {
-	// 1. 初始化内嵌配置 (确保你的 config 包里有 Init 函数加载了 config.json)
+	// 1. 初始化内嵌配置
 	config.Init()
 	log.Printf("Starting VSentry Collector [%s] on %s", config.Global.Name, config.Global.Hostname)
 
@@ -25,10 +26,14 @@ func main() {
 		config.Global.StreamFields,
 	)
 
-	col, err := collector.NewOsCollector(config.Global)
+	// 2.1 初始化底层操作系统采集器 (Windows EventLog / Linux Syslog)
+	osCol, err := collector.NewOsCollector(config.Global)
 	if err != nil {
-		log.Fatalf("Failed to initialize collector: %v", err)
+		log.Fatalf("Failed to initialize OS collector: %v", err)
 	}
+
+	// 2.2 初始化跨平台应用层采集器 (Nginx, MySQL 等通用文本日志)
+	appCol := collector.NewAppCollector(config.Global)
 
 	// 初始化本地失败重试队列 (DLQ)
 	dlq := storage.New(config.Global.Name)
@@ -52,21 +57,33 @@ func main() {
 
 		case <-ticker.C:
 			// A. 执行新日志采集
-			logs, err := col.Collect()
+			var allLogs []ocsf.VSentryOCSFEvent
+
+			// 收集 OS 级日志
+			osLogs, err := osCol.Collect()
 			if err != nil {
-				log.Printf("Collection error: %v", err)
+				log.Printf("OS Collection error: %v", err)
 			}
+			allLogs = append(allLogs, osLogs...)
+
+			// 收集 App 级日志
+			appLogs, err := appCol.Collect()
+			if err != nil {
+				log.Printf("App Collection error: %v", err)
+			}
+			allLogs = append(allLogs, appLogs...)
 
 			networkIsUp := false
 
-			// B. 优先发送新采集的日志
-			if len(logs) > 0 {
-				success, failed := client.SendBatch(logs)
+			// B. 优先发送新采集的日志 (OS 和 App 合并发送)
+			if len(allLogs) > 0 {
+				success, failed := client.SendBatch(allLogs)
 				if failed > 0 {
 					log.Printf("Network error, saving %d new logs to local dead-letter queue", failed)
-					dlq.SaveLogs(logs)
+					dlq.SaveLogs(allLogs)
 					networkIsUp = false
 				} else {
+					// 日志比较多时不建议每 5 秒打印一次，这里仅在调试期间保留
 					log.Printf("Flushed %d new logs successfully", success)
 					networkIsUp = true
 				}
@@ -75,7 +92,7 @@ func main() {
 				networkIsUp = true
 			}
 
-			// C. 【核心修复】：只有在网络确认畅通的情况下，才去处理历史死信队列
+			// C. 【核心防丢机制】：只有在网络确认畅通的情况下，才去处理历史死信队列
 			if networkIsUp {
 				pendingLogs := dlq.LoadAndClearPending()
 				if len(pendingLogs) > 0 {

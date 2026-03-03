@@ -1,5 +1,3 @@
-//go:build linux
-
 package collector
 
 import (
@@ -12,24 +10,26 @@ import (
 	"github.com/laenix/vsentry/pkg/ocsf"
 )
 
-type LinuxCollector struct {
+// AppCollector 专门负责采集跨平台的应用层纯文本日志 (如 Nginx, MySQL, 业务系统)
+type AppCollector struct {
 	cfg       config.AgentConfig
 	positions map[string]int64
 }
 
-func NewOsCollector(cfg config.AgentConfig) (Collector, error) {
-	return &LinuxCollector{
+func NewAppCollector(cfg config.AgentConfig) *AppCollector {
+	return &AppCollector{
 		cfg:       cfg,
 		positions: make(map[string]int64),
-	}, nil
+	}
 }
 
-func (c *LinuxCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
+// Collect 只处理 Format 为 "file" 的数据源
+func (c *AppCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
 	var allLogs []ocsf.VSentryOCSFEvent
 
 	for _, source := range c.cfg.Sources {
-		if !source.Enabled {
-			continue
+		if !source.Enabled || source.Format != "file" {
+			continue // 忽略未启用或不是普通文件的源 (如 windows_event)
 		}
 
 		logs, err := c.tailFile(source, 2000)
@@ -42,7 +42,7 @@ func (c *LinuxCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
 	return allLogs, nil
 }
 
-func (c *LinuxCollector) tailFile(source config.SourceConfig, batchLimit int) ([]ocsf.VSentryOCSFEvent, error) {
+func (c *AppCollector) tailFile(source config.SourceConfig, batchLimit int) ([]ocsf.VSentryOCSFEvent, error) {
 	file, err := os.Open(source.Path)
 	if err != nil {
 		return nil, err
@@ -55,9 +55,8 @@ func (c *LinuxCollector) tailFile(source config.SourceConfig, batchLimit int) ([
 	}
 
 	lastPos := c.positions[source.Path]
-	// 如果文件被轮转（Log Rotation）或者截断，重置读取位置
 	if info.Size() < lastPos {
-		lastPos = 0
+		lastPos = 0 // 文件被轮转截断
 	}
 
 	_, err = file.Seek(lastPos, 0)
@@ -75,7 +74,7 @@ func (c *LinuxCollector) tailFile(source config.SourceConfig, batchLimit int) ([
 			continue
 		}
 
-		logs = append(logs, c.parseLine(source, line))
+		logs = append(logs, c.parseAppLine(source, line))
 		count++
 
 		if count >= batchLimit {
@@ -89,30 +88,25 @@ func (c *LinuxCollector) tailFile(source config.SourceConfig, batchLimit int) ([
 	return logs, nil
 }
 
-func (c *LinuxCollector) parseLine(source config.SourceConfig, line string) ocsf.VSentryOCSFEvent {
-	// 1. 构造保底的 OCSF 基础事件
-	// 如果这是一条无法被正则匹配的未知日志，它依然会被安全地上报
+func (c *AppCollector) parseAppLine(source config.SourceConfig, line string) ocsf.VSentryOCSFEvent {
+	// 构造应用层日志的基础 OCSF 骨架
 	entry := ocsf.VSentryOCSFEvent{
 		Time:         time.Now().UTC().Format(time.RFC3339),
-		CategoryName: ocsf.CategorySystem,
-		ClassName:    "System Log",
-		ClassUID:     1000,
+		CategoryName: ocsf.CategoryApp, // 默认归类为应用层
+		ClassName:    "Application Activity",
+		ClassUID:     1000, // 根据后续 mapper 覆盖
 		SeverityID:   ocsf.SeverityIDInfo,
 		Severity:     ocsf.SeverityInfo,
 		RawData:      line,
 		Metadata:     &ocsf.Metadata{Product: source.Type},
 		Observer: &ocsf.Device{
 			Hostname: c.cfg.Hostname,
-			Vendor:   "Linux",
-			OS:       &ocsf.OS{Type: "linux"},
 		},
 		Unmapped: make(map[string]interface{}),
 	}
-	entry.Unmapped["source_type"] = source.Type
+	entry.Unmapped["app_protocol"] = source.Type
 
-	// =========================================================================
-	// 2. 将基础事件传递给大一统的 Mapper 文本引擎进行深度正则解析和字段覆写
-	// =========================================================================
+	// 移交给大一统的双引擎 Mapper (我们之前写的 linux_web.go 里的正则会在这里生效)
 	mapper.EnrichText(source.Type, line, &entry)
 
 	return entry

@@ -16,22 +16,22 @@ func CollectRouter(r *gin.Engine) *gin.Engine {
 	if staticPath == "" {
 		staticPath = "./dist"
 	}
-	
+
 	// 尝试加载静态文件目录
 	if _, err := os.Stat(staticPath); err == nil {
 		r.Use(gin.Logger())
 		r.Use(gin.Recovery())
-		
+
 		// 静态文件服务 - Vite 构建的应用使用 /assets 路径
 		r.Static("/assets", staticPath+"/assets")
 		r.Static("/static", staticPath)
-		
+
 		// API 路由需要 /api 前缀
 		api := r.Group("/api")
 		{
 			setupAPIRoutes(api)
 		}
-		
+
 		// SPA Fallback: 所有非 API 路由都返回 index.html
 		r.NoRoute(func(c *gin.Context) {
 			path := c.Request.URL.Path
@@ -42,13 +42,13 @@ func CollectRouter(r *gin.Engine) *gin.Engine {
 			}
 			c.File(staticPath + "/index.html")
 		})
-		
+
 		return r
 	}
 
 	// 如果没有静态文件，使用原来的 API 路由方式 (无 /api 前缀)
 	setupAPIRoutes(r.Group(""))
-	
+
 	return r
 }
 
@@ -110,6 +110,7 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		collectors.POST("/update", controller.UpdateCollectorConfig)
 		collectors.POST("/delete", controller.DeleteCollectorConfig)
 		collectors.POST("/build", controller.BuildCollector)
+		collectors.GET("/download", controller.DownloadCollector) // 增加这行，通常下载用 GET
 	}
 
 	// config (public)
