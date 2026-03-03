@@ -44,72 +44,72 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 
 ## 📸 Screenshots
 
-### 1. Dashboard - 安全总览
+### 1. Dashboard
 <p align="center">
   <img src="docs/screenshots/readme-dashboard.png" alt="Dashboard" width="800">
-  <br><em>实时安全态势感知，展示告警数量、严重程度分布、最近活动等关键指标</em>
+  <br><em>Real-time security overview with alerts, severity distribution, and recent activity</em>
 </p>
 
-### 2. Logs - 日志查询与分析
+### 2. Logs - Query & Analysis
 <p align="center">
   <img src="docs/screenshots/readme-logs.png" alt="Logs" width="800">
-  <br><em>基于 LogSQL 的强大日志查询，支持时间范围过滤、实时搜索、JSON/表格/分组多种视图</em>
+  <br><em>Powerful LogSQL-based log query with time range filtering, real-time search, and multiple view modes</em>
 </p>
 
-### 3. Rules - 检测规则管理
+### 3. Rules - Detection Rules
 <p align="center">
   <img src="docs/screenshots/readme-rules-page.png" alt="Rules List" width="800">
-  <br><em>规则列表页，查看所有检测规则及状态</em>
+  <br><em>Rules list page showing all detection rules and their status</em>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/readme-rules-form.png" alt="Rules Form" width="800">
-  <br><em>创建/编辑规则：支持 LogSQL 查询表达式、Cron 定时调度（精确到秒）、严重程度分级</em>
+  <br><em>Create/Edit rules with LogSQL expressions, cron scheduling (down to seconds), and severity levels</em>
 </p>
 
-### 4. Incidents - 事件管理
+### 4. Incidents
 <p align="center">
   <img src="docs/screenshots/incident-with-data.png" alt="Incidents with Data" width="800">
-  <br><em>安全事件中心：检测到日志匹配规则后自动生成告警事件，显示状态、严重程度、告警数量</em>
+  <br><em>Security incident center: auto-generated alerts when logs match rules, showing status, severity, count</em>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/incident-detail-correct.png" alt="Incident Detail" width="800">
-  <br><em>事件详情弹窗：点击眼睛按钮查看，包含告警原始日志、严重程度、状态，支持确认/解决操作</em>
+  <br><em>Incident detail modal: view raw logs, severity, status; support acknowledge/resolve actions</em>
 </p>
 
-### 5. Automation - SOAR 自动化编排
+### 5. Automation - SOAR
 <p align="center">
   <img src="docs/screenshots/readme-automation.png" alt="Automation" width="800">
-  <br><em>可视化剧本编排，连接检测规则与响应动作，支持 HTTP、邮件、条件分支等动作</em>
+  <br><em>Visual workflow orchestration connecting detection rules to response actions (HTTP, email, conditions)</em>
 </p>
 
-### 6. Ingest - 日志接入点
+### 6. Ingest - Log Endpoints
 <p align="center">
   <img src="docs/screenshots/readme-ingest.png" alt="Ingest" width="800">
-  <br><em>日志接入点管理：生成 API 地址和认证 Token，Collector 通过此端点推送日志</em>
+  <br><em>Log endpoint management: generate API addresses and auth tokens for collectors to push logs</em>
 </p>
 
-### 7. Collectors - 日志采集器
+### 7. Collectors - Log Agents
 <p align="center">
   <img src="docs/screenshots/readme-collectors.png" alt="Collectors" width="800">
-  <br><em>构建跨平台日志采集器（Windows/Linux/macOS），一键生成配置文件</em>
+  <br><em>Build cross-platform log collectors (Windows/Linux/macOS) with one-click config generation</em>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/collectors-create.png" alt="Collectors Create" width="800">
-  <br><em>选择模板并配置采集器：选择数据源、映射规则、目标接入点</em>
+  <br><em>Select template and configure collector: choose data sources, mapping rules, target endpoint</em>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/windows-collectors.png" alt="Windows Collector with OCSF" width="800">
-  <br><em>Windows Event Collector：原生 Go Agent，零依赖部署，支持 OCSF (Open Cybersecurity Schema Framework) 标准格式输出</em>
+  <br><em>Windows Event Collector: Native Go agent, zero-dependency deployment, OCSF format output</em>
 </p>
 
-### 8. Settings - 系统配置
+### 8. Settings
 <p align="center">
   <img src="docs/screenshots/readme-settings.png" alt="Settings" width="800">
-  <br><em>系统管理：用户管理、采集器配置、外观设置</em>
+  <br><em>System administration: user management, collector config, appearance settings</em>
 </p>
 
 ## 🏗️ Architecture
@@ -190,11 +190,11 @@ npm run build
 When running with Docker Compose, you can use environment variables to override settings:
 
 ```bash
-# 方式 1: 使用 .env 文件
+# Method 1: Using .env file
 echo "EXTERNAL_URL=http://your-server-ip:8088" > .env
 docker-compose up -d
 
-# 方式 2: 直接在命令行指定
+# Method 2: Direct command line
 EXTERNAL_URL=http://192.168.1.100:8088 docker-compose up -d
 ```
 
@@ -202,9 +202,9 @@ EXTERNAL_URL=http://192.168.1.100:8088 docker-compose up -d
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `EXTERNAL_URL` | 外部访问地址，用于生成 Collector 端点 | `http://localhost:8088` |
-| `VICTORIALOGS_URL` | VictoriaLogs 服务地址 | `http://victorialogs:9428` |
-| `JWT_SECRET` | JWT 密钥 | `your-secret-key-change-in-production` |
+| `EXTERNAL_URL` | External URL for collector endpoint generation | `http://localhost:8088` |
+| `VICTORIALOGS_URL` | VictoriaLogs service URL | `http://victorialogs:9428` |
+| `JWT_SECRET` | JWT secret key | `your-secret-key-change-in-production` |
 
 > **Tip**: For production, always set `EXTERNAL_URL` to your public IP or domain (e.g., `http://192.168.1.100:8088` or `https://vsentry.yourdomain.com`). This ensures the built collectors can correctly report to your server.
 
