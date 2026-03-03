@@ -256,7 +256,7 @@ state the exclusion of warranty; and each file should have at least
 the "copyright" line and a pointer to where the full notice is found.
 
     <one line to give the program's name and a brief idea of what it does.>
-    Copyright (C) <year>  <name of author>
+    Copyright (C) <year>  Xu Bo (Boris Xu)
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -291,36 +291,104 @@ the GNU AGPL, see <https://www.gnu.org/licenses/>.
                               TRADEMARK NOTICE
 ================================================================================
 
-"VSentry" is a registered trademark of Boris Xu. All rights reserved.
+"VSentry" is a registered trademark of Xu Bo (Boris Xu). All rights reserved.
 
 This program is licensed under the GNU Affero General Public License
 v3 (AGPLv3). The name "VSentry" and associated logos are exclusive
-property of Boris Xu and may not be used without prior written permission.
+property of Xu Bo (Boris Xu) and may not be used without prior written permission.
 
 Commercial use of this software under a different name is prohibited.
 If you wish to use this software under a commercial license, please
 contact the author for enterprise licensing options.
 
 ================================================================================
+                           VERSION STRATEGY
+================================================================================
+
+VSentry is distributed in two versions:
+
+------------------------------------------------------------------------------
+                           COMMUNITY EDITION
+                     (Free, AGPLv3 License)
+------------------------------------------------------------------------------
+
+The Community Edition is free for personal and non-commercial use.
+It includes full functionality:
+
+  - Log Collection, Storage & Query
+  - Detection Rules (Cron-based)
+  - Incident Management
+  - Basic SOAR Playbooks
+  - Cross-platform Collectors (Windows/Linux/macOS)
+  - Multiple Mappers (Authentication, Network, Process, etc.)
+  - Investigation Module (Investigation templates, IOC analysis)
+  - Forensics Module (EVTX/PCAP upload, parsing, timeline)
+
+  Use Restriction: Non-commercial use only.
+
+------------------------------------------------------------------------------
+                           ENTERPRISE EDITION
+                      (Commercial License Required)
+------------------------------------------------------------------------------
+
+The Enterprise Edition is available under a separate commercial license
+and includes all Community Edition features plus:
+
+  - Multi-tenancy Support
+  - High-availability Clustering
+  - Advanced Analytics Module
+  - Compliance Center (Paid Module)
+      * 等保 2.0 Compliance (China)
+      * SOC 2 Audit
+      * ISO 27001
+      * GDPR Compliance
+      * Custom Compliance Framework
+  - Priority Technical Support (7x24)
+  - SLA Guarantee
+  - Commercial License Protection
+
+  Pricing: Contact author for enterprise pricing.
+
+================================================================================
                               COMMERCIAL NOTICE
 ================================================================================
 
-This program is free software under the terms of AGPLv3.
+This program is free software under the terms of AGPLv3 (Community Edition).
 
 For commercial purposes, including but not limited to:
-- Using this software in proprietary products
-- Offering this software as a hosted service (SaaS)
-- Bundling this software with closed-source products
+
+  - Using this software in proprietary products
+  - Offering this software as a hosted service (SaaS)
+  - Bundling this software with closed-source products
+  - Using the Enterprise Edition features
 
 Please contact the author for commercial licensing:
 
     Boris Xu
-    Email: [Your Email]
+    Email: laenix120@gmail.com
 
-Enterprise features may be available under a separate commercial license,
-including:
-- Multi-tenancy support
-- High-availability clustering
-- Advanced forensics and investigation modules
-- Priority technical support
-- SLA guarantees
+Enterprise License includes:
+
+  - Multi-tenant SIEM deployment
+  - High-availability clustering
+  - Compliance center (等保 2.0, SOC 2, ISO 27001, GDPR)
+  - Priority technical support
+  - SLA guarantees
+  - Custom development services
+
+================================================================================
+                              PATENT NOTICE
+================================================================================
+
+Certain innovations in this software may be protected by patents or
+patent applications, including but not limited to:
+
+  - Cross-platform log collector architecture
+  - OCSF-based log normalization method
+  - Investigation automation system
+  - Forensics timeline generation
+
+Commercial use under Enterprise License includes usage of these
+patented technologies.
+
+================================================================================
