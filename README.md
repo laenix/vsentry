@@ -97,6 +97,11 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 </p>
 
 <p align="center">
+  <img src="docs/screenshots/collectors-create.png" alt="Collectors Create" width="800">
+  <br><em>选择模板并配置采集器：选择数据源、映射规则、目标接入点</em>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/windows-collectors.png" alt="Windows Collector with OCSF" width="800">
   <br><em>Windows Event Collector：原生 Go Agent，零依赖部署，支持 OCSF (Open Cybersecurity Schema Framework) 标准格式输出</em>
 </p>
