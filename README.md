@@ -9,7 +9,7 @@
     <img src="https://img.shields.io/github/stars/laenix/vsentry?style=social" alt="Stars">
   </a>
   <a href="https://github.com/laenix/vsentry/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
+    <img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License">
   </a>
   <a href="https://github.com/laenix/vsentry/releases">
     <img src="https://img.shields.io/github/v/release/laenix/vsentry" alt="Release">
@@ -36,6 +36,8 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 ### Detection & Response
 - **Detection Rules** - Create rules with cron-based scheduling
 - **Incident Management** - Track and manage security incidents
+- **Investigation Center** - Pre-built investigation templates with timeline view and directive suggestions
+- **Forensics** - EVTX/PCAP upload, automatic parsing, and timeline analysis
 - **SOAR Automation** - Visual workflow automation with React Flow
 
 ### Integrations
@@ -82,19 +84,25 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
   <br><em>Incident detail modal: view raw logs, severity, status; support acknowledge/resolve actions</em>
 </p>
 
-### 5. Automation - SOAR
+### 5. Investigation - Security Investigation Center
+<p align="center">
+  <img src="docs/screenshots/Investigation-detail.png" alt="Investigation" width="800">
+  <br><em>Security investigation center: timeline view, directive suggestions, context panel, and pre-built investigation templates</em>
+</p>
+
+### 6. Automation - SOAR
 <p align="center">
   <img src="docs/screenshots/readme-automation.png" alt="Automation" width="800">
   <br><em>Visual workflow orchestration connecting detection rules to response actions (HTTP, email, conditions)</em>
 </p>
 
-### 6. Ingest - Log Endpoints
+### 7. Ingest - Log Endpoints
 <p align="center">
   <img src="docs/screenshots/readme-ingest.png" alt="Ingest" width="800">
   <br><em>Log endpoint management: generate API addresses and auth tokens for collectors to push logs</em>
 </p>
 
-### 7. Collectors - Log Agents
+### 8. Collectors - Log Agents
 <p align="center">
   <img src="docs/screenshots/readme-collectors.png" alt="Collectors" width="800">
   <br><em>Build cross-platform log collectors (Windows/Linux/macOS) with one-click config generation</em>
@@ -115,7 +123,7 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
   <br><em>Linux Event Collector: Native Go agent, supports syslog, auditd, and OCSF format output</em>
 </p>
 
-### 8. Settings
+### 9. Settings
 <p align="center">
   <img src="docs/screenshots/readme-settings.png" alt="Settings" width="800">
   <br><em>System administration: user management, collector config, appearance settings</em>
