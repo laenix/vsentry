@@ -3,10 +3,12 @@ module github.com/laenix/vsentry
 go 1.23.0
 
 require (
+	github.com/0xrawsec/golang-evtx v1.2.9
 	github.com/dgraph-io/badger/v4 v4.9.1
 	github.com/expr-lang/expr v1.17.7
 	github.com/gin-gonic/gin v1.11.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/google/gopacket v1.1.19
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/viper v1.21.0
 	golang.org/x/crypto v0.41.0
@@ -17,6 +19,7 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/0xrawsec/golang-utils v1.3.0 // indirect
 	github.com/bytedance/sonic v1.14.0 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

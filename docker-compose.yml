@@ -10,6 +10,7 @@ services:
     command:
       - -httpListenAddr=:9428
       - -storageDataPath=/victoria-logs-data
+      - -retentionPeriod=3650d
     restart: unless-stopped
     networks:
       - vsentry-network

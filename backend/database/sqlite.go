@@ -38,6 +38,8 @@ func InitDB() *gorm.DB {
 	db.AutoMigrate(&model.Alert{})
 	db.AutoMigrate(&model.Incident{})
 	db.AutoMigrate(&model.InvestigationTemplate{})
+	db.AutoMigrate(&model.ForensicTask{})
+	db.AutoMigrate(&model.ForensicFile{})
 	db.AutoMigrate(&model.Playbook{})
 	db.AutoMigrate(&model.PlaybookExecution{})
 

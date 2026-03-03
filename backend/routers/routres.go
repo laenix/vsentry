@@ -163,7 +163,7 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 	}
 
 	// investigation
-	investigationGroup := r.Group("/investigation")
+	investigationGroup := r.Group("/investigation", middleware.AuthMiddleware())
 	{
 		investigationGroup.GET("/templates", controller.ListInvestigationTemplates)
 		investigationGroup.POST("/templates", controller.AddInvestigationTemplate)
@@ -173,11 +173,17 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		investigationGroup.POST("/execute", controller.ExecuteInvestigation) // 核心执行引擎
 	}
 	// forensics
-	forensicsGroup := r.Group("/forensics")
+	forensicsGroup := r.Group("/forensics", middleware.AuthMiddleware())
 	{
+		forensicsGroup.GET("/tasks", controller.ListForensicTasks)
 		forensicsGroup.POST("/tasks", controller.CreateForensicTask)
-		forensicsGroup.POST("/upload", controller.UploadForensicFile) // 注意：前端需使用 FormData 提交
+		forensicsGroup.GET("/tasks/:id", controller.GetForensicTask)
+		forensicsGroup.DELETE("/tasks/:id", controller.DeleteForensicTask)
+		
+		forensicsGroup.POST("/upload", controller.UploadForensicFile)
+		forensicsGroup.DELETE("/files/:id", controller.DeleteForensicFile)
 	}
+	// automation
 	automation := r.Group("/playbooks", middleware.AuthMiddleware())
 	{
 		automation.GET("", controller.ListPlaybooks)         // 列表

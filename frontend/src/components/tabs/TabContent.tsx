@@ -15,6 +15,9 @@ import CollectorsPage from "@/pages/Collectors"
 import CustomLogsPage from "@/pages/CustomLogs"
 import SettingsPage from "@/pages/Settings"
 
+// ✅ 新增导入 ForensicsPage
+import ForensicsPage from "@/pages/Forensics"
+
 export function TabContent() {
   const { tabs, activeTabId, setActiveTab, removeTab } = useTabStore()
 
@@ -23,7 +26,8 @@ export function TabContent() {
     switch (type) {
       case 'dashboard':     return <DashboardPage />
       case 'logs':          return <LogsPage />
-      case 'investigation': return <InvestigationPage tabData={tabData} /> // ✅ 把上下文数据传进去
+      case 'investigation': return <InvestigationPage tabData={tabData} /> 
+      case 'forensics':     return <ForensicsPage />
       case 'rules':         return <RulesPage />
       case 'incidents':     return <IncidentsPage />
       case 'automation':    return <AutomationPage />

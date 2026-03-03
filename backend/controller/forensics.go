@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	"github.com/laenix/vsentry/database"
 	"github.com/laenix/vsentry/model"
 	"github.com/spf13/viper"
+	"github.com/laenix/vsentry/forensic"
 )
 
 const ForensicUploadDir = "./data/forensics"
@@ -89,21 +89,8 @@ func processForensicFile(f model.ForensicFile) {
 	db := database.GetDB()
 	db.Model(&f).Update("parse_status", "parsing")
 
-	var parsedEvents []map[string]interface{}
-	var err error
-
-	// 策略模式：根据文件后缀调用不同的解析引擎
-	switch f.FileType {
-	case "log", "txt", "csv":
-		parsedEvents, err = parseTextLog(f.FilePath)
-	case "evtx":
-		parsedEvents, err = parseEVTX(f.FilePath)
-	case "pcap", "pcapng":
-		parsedEvents, err = parsePCAP(f.FilePath)
-	default:
-		err = fmt.Errorf("unsupported file type: %s", f.FileType)
-	}
-
+	// 1. 调用同级包的工厂方法
+	p, err := forensic.GetParser(f.FileType)
 	if err != nil {
 		db.Model(&f).Updates(map[string]interface{}{
 			"parse_status":  "failed",
@@ -112,22 +99,29 @@ func processForensicFile(f model.ForensicFile) {
 		return
 	}
 
-	// 🔥 隔离注入：将解析出的数据打入 VictoriaLogs，并强制附加沙箱标签
+	// 2. 执行真正的硬核解析
+	parsedEvents, err := p.Parse(f.FilePath)
+	if err != nil {
+		db.Model(&f).Updates(map[string]interface{}{
+			"parse_status":  "failed",
+			"parse_message": err.Error(),
+		})
+		return
+	}
+
+	// 3. 将解析出的数据打入 VictoriaLogs
 	vlURL := viper.GetString("victorialogs.url")
 	if vlURL == "" {
 		vlURL = "http://localhost:9428"
 	}
-	// 注意这里：我们把 env 设置为 forensics，并把 task_id 作为流字段！
 	ingestURL := fmt.Sprintf("%s/insert/jsonline?_stream_fields=env,task_id&_time_field=time&_msg_field=raw_data", vlURL)
 
 	var jsonlBuffer bytes.Buffer
 	for _, event := range parsedEvents {
-		// 强制注入沙箱隔离标签
 		event["env"] = "forensics"
 		event["task_id"] = fmt.Sprintf("%d", f.TaskID)
 		event["forensic_file_id"] = fmt.Sprintf("%d", f.ID)
 
-		// 确保有时间戳
 		if _, ok := event["time"]; !ok {
 			event["time"] = time.Now().UTC().Format(time.RFC3339)
 		}
@@ -137,7 +131,6 @@ func processForensicFile(f model.ForensicFile) {
 		jsonlBuffer.WriteString("\n")
 	}
 
-	// 发送到 VictoriaLogs
 	resp, postErr := http.Post(ingestURL, "application/x-ndjson", &jsonlBuffer)
 	if postErr != nil || resp.StatusCode >= 400 {
 		db.Model(&f).Updates(map[string]interface{}{
@@ -147,7 +140,6 @@ func processForensicFile(f model.ForensicFile) {
 		return
 	}
 
-	// 更新成功状态
 	db.Model(&f).Updates(map[string]interface{}{
 		"parse_status":  "completed",
 		"event_count":   len(parsedEvents),
@@ -155,55 +147,66 @@ func processForensicFile(f model.ForensicFile) {
 	})
 }
 
-// ==================== 解析引擎实现区 ====================
+// ListForensicTasks 获取所有取证案件列表
+func ListForensicTasks(ctx *gin.Context) {
+	var tasks []model.ForensicTask
+	// 按时间倒序，顺便把关联的文件也查出来统计数量
+	database.GetDB().Preload("Files").Order("created_at desc").Find(&tasks)
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "data": tasks})
+}
 
-// parseTextLog 解析普通文本日志
-func parseTextLog(filePath string) ([]map[string]interface{}, error) {
-	file, err := os.Open(filePath)
+// GetForensicTask 获取单个案件详情及其下的所有文件（前端轮询解析进度用）
+func GetForensicTask(ctx *gin.Context) {
+	id := ctx.Param("id")
+	var task model.ForensicTask
+	
+	err := database.GetDB().Preload("Files").First(&task, id).Error
 	if err != nil {
-		return nil, err
+		ctx.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "Task not found"})
+		return
 	}
-	defer file.Close()
-
-	var events []map[string]interface{}
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
-		// 这里你可以复用之前的 Mapper，为了演示，我们先包裹成基础 OCSF 格式
-		events = append(events, map[string]interface{}{
-			"raw_data":      line,
-			"category_name": "Findings",
-			"class_name":    "Forensic Evidence",
-		})
-	}
-	return events, nil
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "data": task})
 }
 
-// parseEVTX 解析 Windows EVTX (二期扩展点)
-func parseEVTX(filePath string) ([]map[string]interface{}, error) {
-	// TODO: 引入 github.com/0xrawsec/golang-evtx 进行真实解析
-	// 目前先返回 Mock 数据保证流程畅通
-	var events []map[string]interface{}
-	events = append(events, map[string]interface{}{
-		"raw_data":      fmt.Sprintf("Mock parsed EVTX from %s", filePath),
-		"event_id":      4624,
-		"activity_name": "Logon",
-	})
-	return events, nil
+// DeleteForensicFile 删除单个证据文件（连同磁盘文件一起删）
+func DeleteForensicFile(ctx *gin.Context) {
+	id := ctx.Param("id")
+	db := database.GetDB()
+	var file model.ForensicFile
+
+	if err := db.First(&file, id).Error; err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "File not found"})
+		return
+	}
+
+	// 1. 删除磁盘物理文件
+	_ = os.Remove(file.FilePath)
+	// 2. 删除数据库记录
+	db.Delete(&file)
+	// (可选) 3. 如果需要，可以调用 VictoriaLogs API 删除对应的日志，但通常保留即可或依赖 TTL
+
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "File deleted"})
 }
 
-// parsePCAP 解析网络抓包 (二期扩展点)
-func parsePCAP(filePath string) ([]map[string]interface{}, error) {
-	// TODO: 引入 github.com/google/gopacket 进行真实解析
-	var events []map[string]interface{}
-	events = append(events, map[string]interface{}{
-		"raw_data": fmt.Sprintf("Mock parsed PCAP from %s", filePath),
-		"src_ip":   "192.168.1.100",
-		"dst_ip":   "8.8.8.8",
-		"protocol": "DNS",
-	})
-	return events, nil
+// DeleteForensicTask 删除整个取证案件
+func DeleteForensicTask(ctx *gin.Context) {
+	id := ctx.Param("id")
+	db := database.GetDB()
+	var task model.ForensicTask
+
+	if err := db.Preload("Files").First(&task, id).Error; err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "Task not found"})
+		return
+	}
+
+	// 1. 遍历删除磁盘上的物理文件
+	for _, file := range task.Files {
+		_ = os.Remove(file.FilePath)
+		db.Delete(&file)
+	}
+
+	// 2. 删除案件本身
+	db.Delete(&task)
+
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Task and related files deleted"})
 }
