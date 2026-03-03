@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
-	"github.com/laenix/vsentry/pkg/ocsf" // 引入标准契约
+	"github.com/laenix/vsentry/pkg/ocsf"
 )
 
 type Client struct {
@@ -17,8 +19,20 @@ type Client struct {
 }
 
 func NewClient(endpoint, token, streamFields string) *Client {
-	if len(streamFields) > 0 {
-		endpoint = fmt.Sprintf("%s?_stream_fields=%s", endpoint, streamFields)
+	streamFields = strings.TrimPrefix(streamFields, "_stream_fields=")
+
+	u, err := url.Parse(endpoint)
+	if err == nil {
+		q := u.Query()
+		if streamFields != "" {
+			q.Set("_stream_fields", streamFields)
+		}
+
+		q.Set("_msg_field", "raw_data")
+		q.Set("_time_field", "time")
+
+		u.RawQuery = q.Encode()
+		endpoint = u.String()
 	}
 
 	return &Client{
@@ -30,23 +44,30 @@ func NewClient(endpoint, token, streamFields string) *Client {
 	}
 }
 
-// SendBatch 的签名改为接收 OCSF 事件数组
 func (c *Client) SendBatch(logs []ocsf.VSentryOCSFEvent) (success int, failed int) {
 	if len(logs) == 0 {
 		return 0, 0
 	}
 
-	jsonData, err := json.Marshal(logs)
+	// 【核心改造】：不使用 Marshal 生成大数组，而是逐行 Encode 形成 JSONL
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+
+	for _, logEntry := range logs {
+		if err := encoder.Encode(logEntry); err != nil {
+			failed++
+			continue
+		}
+		success++
+	}
+
+	req, err := http.NewRequest("POST", c.endpoint, &buf)
 	if err != nil {
 		return 0, len(logs)
 	}
 
-	req, err := http.NewRequest("POST", c.endpoint, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return 0, len(logs)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
+	// 明确声明我们发送的是 NDJSON 流
+	req.Header.Set("Content-Type", "application/x-ndjson")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
 
 	resp, err := c.httpClient.Do(req)
@@ -56,7 +77,7 @@ func (c *Client) SendBatch(logs []ocsf.VSentryOCSFEvent) (success int, failed in
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
-		return len(logs), 0
+		return success, failed
 	}
 
 	return 0, len(logs)

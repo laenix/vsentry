@@ -52,9 +52,29 @@ export const collectorService = {
   
   delete: (id: number) => apiClient.post(`/collectors/delete?id=${id}`),
   
-  build: (id: number) => apiClient.post(`/collectors/build?id=${id}`, {}, {
-    responseType: 'blob',
-  }),
+  // 核心修复：绕过 apiClient 的 JSON 拦截器，使用原生 Fetch 处理纯二进制流
+  build: async (id: number) => {
+    // 如果你的系统有 JWT Token，请从 localStorage 或 Cookie 中获取
+    const token = localStorage.getItem("vsentry_token");
+    
+    const response = await fetch(`/api/collectors/build?id=${id}`, {
+      method: 'POST',
+      headers: {
+        // 必须带上认证头，否则后端会报 401
+        'Authorization': `Bearer ${token}` 
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Build failed with status: ${response.status}`);
+    }
+
+    // 将响应体作为纯二进制 Blob 提取
+    const blob = await response.blob();
+    
+    // 包装成 { data: blob } 以兼容你 UI 组件中 const res = await ...; window.URL.createObjectURL(res.data) 的写法
+    return { data: blob };
+  },
   
   ingestAuth: (id: number) => apiClient.get<any, APIResponse<{token: string}>>(`/ingestmanager/auth/${id}`),
 };

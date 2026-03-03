@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Edit, Download, Server, Settings, Package, Activity, CheckCircle } from "lucide-react";
+import { Plus, Trash2, Edit, Download, Server, Package, Activity, CheckCircle, Filter } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -32,12 +32,15 @@ const typeIcons: Record<string, any> = {
   macos: Activity,
 };
 
-// Data source interface for frontend
+// 增强的数据源接口，加入高级过滤属性与场景预设
 interface DataSource {
   type: string;
   path: string;
   label: string;
   enabled: boolean;
+  event_ids_str?: string; 
+  query?: string;         
+  presets?: { name: string, ids: string }[]; 
 }
 
 export default function CollectorsPage() {
@@ -48,18 +51,16 @@ export default function CollectorsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<CollectorConfig | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [availableChannels, setAvailableChannels] = useState<string[]>([]);
   const [availableSources, setAvailableSources] = useState<DataSource[]>([]);
   const [activeTab, setActiveTab] = useState<string>("templates");
 
-  // 【核心修改】：默认 stream_fields 适配 OCSF 规范
   const defaultStreamFields = "observer.hostname,observer.vendor,class_uid";
 
   const [formData, setFormData] = useState({
     name: "",
     type: "windows",
     channels: "",
-    sources: "", // JSON string of sources for all OS
+    sources: "", 
     ingest_id: 0,
     stream_fields: defaultStreamFields,
     interval: 5,
@@ -93,35 +94,42 @@ export default function CollectorsPage() {
     fetchData();
   }, []);
 
-  // 【核心修改】：带回显状态的 Sources 抓取逻辑
   const fetchSourcesForType = async (type: string, savedSourcesStr?: string) => {
     try {
       const res = await collectorService.getSources(type);
       if (res.code === 200 && res.data) {
         const data = res.data;
         if (Array.isArray(data) && data.length > 0) {
-          if (typeof data[0] === 'string') {
-            setAvailableChannels(data as string[]);
-            setAvailableSources([]);
-          } else {
-            // 解析已保存的 JSON 以恢复 Checkbox 选中状态
-            const savedSourcesMap = new Map();
-            if (savedSourcesStr) {
-              try {
-                const parsed = JSON.parse(savedSourcesStr);
-                parsed.forEach((s: any) => savedSourcesMap.set(s.type || s.path, s.enabled));
-              } catch (e) {}
-            }
+          // 解析已保存的配置以进行回显
+          const savedMap = new Map();
+          if (savedSourcesStr) {
+            try {
+              const parsed = JSON.parse(savedSourcesStr);
+              parsed.forEach((s: any) => {
+                savedMap.set(s.type || s.path, {
+                  enabled: s.enabled,
+                  event_ids_str: s.event_ids ? s.event_ids.join(", ") : "",
+                  query: s.query || ""
+                });
+              });
+            } catch (e) {}
+          }
 
-            const sources = (data as any[]).map((item: any) => ({
+          const sources: DataSource[] = (data as any[]).map((item: any) => {
+            const key = item.type || item.Path || '';
+            const savedState = savedMap.get(key) || { enabled: false, event_ids_str: "", query: "" };
+            
+            return {
               type: item.type || item.Type || '',
               path: item.path || item.Path || '',
               label: item.label || item.Label || item.type || '',
-              enabled: savedSourcesMap.has(item.type || item.path) ? savedSourcesMap.get(item.type || item.path) : false,
-            }));
-            setAvailableSources(sources);
-            setAvailableChannels([]);
-          }
+              enabled: savedState.enabled,
+              event_ids_str: savedState.event_ids_str,
+              query: savedState.query,
+              presets: item.presets || [], 
+            };
+          });
+          setAvailableSources(sources);
         }
       }
     } catch (err) {
@@ -129,25 +137,62 @@ export default function CollectorsPage() {
     }
   };
 
-  // 监听 OS 类型切换，重新拉取对应平台的支持列表
   useEffect(() => {
     if (formData.type) {
       fetchSourcesForType(formData.type, formData.sources);
     }
   }, [formData.type]);
 
-  // 切换复选框逻辑，并实时同步为 JSON string
-  const toggleSource = (type: string) => {
-    const updated = availableSources.map(s => {
-      if (s.type === type) {
-        return { ...s, enabled: !s.enabled };
+  // 将 UI 状态序列化为 Agent 所需的严格 JSON 结构
+  const syncSourcesToFormData = (sources: DataSource[]) => {
+    const enabledSources = sources.filter(s => s.enabled).map(s => {
+      let ids: number[] = [];
+      if (s.event_ids_str && s.event_ids_str.trim() !== "") {
+        // 将 "4624, 4625" 转换为 [4624, 4625]
+        ids = s.event_ids_str.split(',')
+          .map(id => parseInt(id.trim()))
+          .filter(id => !isNaN(id));
       }
-      return s;
+      
+      return {
+        type: s.type,
+        path: s.path,
+        format: formData.type === "windows" ? "windows_event" : "file",
+        enabled: true,
+        event_ids: ids.length > 0 ? ids : undefined,
+        query: s.query && s.query.trim() !== "" ? s.query.trim() : undefined
+      };
     });
-    setAvailableSources(updated);
     
-    const enabledSources = updated.filter(s => s.enabled);
-    setFormData({ ...formData, sources: JSON.stringify(enabledSources) });
+    setFormData(prev => ({ ...prev, sources: JSON.stringify(enabledSources) }));
+  };
+
+  // 勾选/取消勾选日志源
+  const toggleSource = (type: string) => {
+    const updated = availableSources.map(s => 
+      s.type === type ? { ...s, enabled: !s.enabled } : s
+    );
+    setAvailableSources(updated);
+    syncSourcesToFormData(updated);
+  };
+
+  // 更新对应数据源的高级配置（EventID / XPath）
+  const updateSourceConfig = (type: string, field: 'event_ids_str' | 'query', value: string) => {
+    const updated = availableSources.map(s => 
+      s.type === type ? { ...s, [field]: value } : s
+    );
+    setAvailableSources(updated);
+    syncSourcesToFormData(updated);
+  };
+
+  // 处理快捷预设的点击（智能追加与去重）
+  const handlePresetClick = (source: DataSource, presetIds: string) => {
+    const current = source.event_ids_str ? source.event_ids_str.split(',').map(s => s.trim()).filter(s => s) : [];
+    const newIds = presetIds.split(',').map(s => s.trim());
+    
+    // 使用 Set 进行合并去重
+    const merged = Array.from(new Set([...current, ...newIds]));
+    updateSourceConfig(source.type, 'event_ids_str', merged.join(', '));
   };
 
   const getConfigID = (c: CollectorConfig) => c.ID || c.id || 0;
@@ -159,7 +204,7 @@ export default function CollectorsPage() {
         name: config.name,
         type: config.type,
         channels: config.channels || "",
-        sources: config.sources || "", // 载入历史 sources
+        sources: config.sources || "",
         ingest_id: config.ingest_id || 0,
         stream_fields: config.stream_fields || defaultStreamFields,
         interval: config.interval || 5,
@@ -170,7 +215,7 @@ export default function CollectorsPage() {
       setFormData({
         name: template.name,
         type: template.type,
-        channels: template.channels?.join(",") || "",
+        channels: "",
         sources: "",
         ingest_id: 0,
         stream_fields: defaultStreamFields,
@@ -228,20 +273,10 @@ export default function CollectorsPage() {
     }
   };
 
-  const handleIngestChange = async (ingestId: string) => {
-    const id = parseInt(ingestId);
-    setFormData({...formData, ingest_id: id});
-    
-    // We don't necessarily need to fetch the token to show it here since 
-    // the backend will fetch it dynamically during the build process, 
-    // but fetching it for display is fine.
-  };
-
-  // 【核心修改】：抛弃 ZIP 解压，直接下发单体二进制文件
   const handleBuild = async (config: CollectorConfig) => {
     try {
       toast.info("Compiling standalone collector binary...", {
-        description: "This takes 1-2 seconds with our Cloud-Native compiler."
+        description: "Executing Cloud-Native compilation..."
       });
       
       const res = await collectorService.build(getConfigID(config));
@@ -249,8 +284,6 @@ export default function CollectorsPage() {
       const url = window.URL.createObjectURL(res.data);
       const a = document.createElement('a');
       a.href = url;
-      
-      // 根据目标系统智能分配后缀名
       const safeName = config.name.replace(/\s+/g, '_').toLowerCase();
       const ext = config.type === "windows" ? ".exe" : "";
       a.download = `vsentry-agent-${safeName}${ext}`;
@@ -261,11 +294,10 @@ export default function CollectorsPage() {
       document.body.removeChild(a);
       
       toast.success("Collector compiled and downloaded!", {
-        description: "Zero dependencies. Just drop it onto your server and run."
+        description: "Drop the binary onto your server and run it."
       });
       fetchData();
     } catch (err) {
-      console.error(err);
       toast.error("Compilation failed");
     }
   };
@@ -297,7 +329,6 @@ export default function CollectorsPage() {
         </TabsList>
 
         <TabsContent value="templates" className="flex-1 mt-0">
-          {/* Templates Grid */}
           <div className="mb-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">Available Templates</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -312,23 +343,12 @@ export default function CollectorsPage() {
                       </CardTitle>
                       <CardDescription>{template.description}</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-1">
-                        {template.channels?.slice(0, 4).map((ch: string) => (
-                          <Badge key={ch} variant="secondary" className="text-xs">{ch}</Badge>
-                        ))}
-                        {template.channels?.length > 4 && (
-                          <Badge variant="outline" className="text-xs">+{template.channels.length - 4}</Badge>
-                        )}
-                      </div>
-                    </CardContent>
                   </Card>
                 );
               })}
             </div>
           </div>
 
-          {/* Configured Collectors */}
           <div>
             <h3 className="text-sm font-medium text-muted-foreground mb-3">Configured Collectors</h3>
             <div className="border rounded-md bg-card">
@@ -359,7 +379,7 @@ export default function CollectorsPage() {
                           </TableCell>
                           <TableCell>
                             {config.build_status === "completed" ? (
-                              <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Ready to Deploy</Badge>
+                              <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Ready</Badge>
                             ) : config.build_status === "building" ? (
                               <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Compiling...</Badge>
                             ) : (
@@ -370,10 +390,10 @@ export default function CollectorsPage() {
                             <Button variant="outline" size="sm" onClick={() => handleBuild(config)}>
                               <Download className="w-3.5 h-3.5 mr-2" /> Build & Download
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(config)}>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(config)}>
                               <Edit className="w-3.5 h-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" onClick={() => handleDelete(id)}>
+                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleDelete(id)}>
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           </TableCell>
@@ -384,7 +404,7 @@ export default function CollectorsPage() {
                     !loading && (
                       <TableRow>
                         <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                          No collectors configured. Click a template to start.
+                          No collectors configured.
                         </TableCell>
                       </TableRow>
                     )
@@ -402,6 +422,7 @@ export default function CollectorsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/5">
+                    <TableHead className="w-[50px]">ID</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -412,6 +433,7 @@ export default function CollectorsPage() {
                     const id = getConfigID(config);
                     return (
                       <TableRow key={id}>
+                        <TableCell className="font-mono text-xs text-muted-foreground">#{id}</TableCell>
                         <TableCell className="font-medium">{config.name}</TableCell>
                         <TableCell>
                           {config.build_status === "completed" ? (
@@ -423,10 +445,10 @@ export default function CollectorsPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-right space-x-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleBuild(config)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleBuild(config)}>
                             <Download className="w-3.5 h-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(config)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(config)}>
                             <Edit className="w-3.5 h-3.5" />
                           </Button>
                         </TableCell>
@@ -435,8 +457,8 @@ export default function CollectorsPage() {
                   })}
                   {configs.filter(c => c.type === osType).length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={3} className="h-32 text-center text-muted-foreground">
-                        No {osType} collectors. Click Templates to create one.
+                      <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                        No {osType} collectors configured.
                       </TableCell>
                     </TableRow>
                   )}
@@ -447,32 +469,31 @@ export default function CollectorsPage() {
         ))}
       </Tabs>
 
-      {/* Configuration Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="sm:max-w-[650px]">
           <DialogHeader>
             <DialogTitle>
               {editingConfig ? "Edit Collector" : "Configure Collector"}
             </DialogTitle>
             <DialogDescription>
-              Deploy a zero-dependency agent that normalizes logs into OCSF standard schema.
+              Deploy a zero-dependency agent that normalizes logs into OCSF schema.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-1 pr-3">
             <div className="grid gap-2">
               <Label>Probe Name</Label>
               <Input 
                 value={formData.name} 
                 onChange={e => setFormData({...formData, name: e.target.value})} 
-                placeholder="e.g. DMZ Web Server Probe"
+                placeholder="e.g. Domain Controller Security Probe"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Target OS</Label>
-                <Select value={formData.type} onValueChange={v => setFormData({...formData, type: v, sources: "", channels: ""})}>
+                <Select value={formData.type} onValueChange={v => setFormData({...formData, type: v, sources: ""})}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="windows">Windows</SelectItem>
@@ -484,7 +505,7 @@ export default function CollectorsPage() {
               
               <div className="grid gap-2">
                 <Label>Target Ingest Node</Label>
-                <Select value={String(formData.ingest_id)} onValueChange={handleIngestChange}>
+                <Select value={String(formData.ingest_id)} onValueChange={v => setFormData({...formData, ingest_id: parseInt(v)})}>
                   <SelectTrigger><SelectValue placeholder="Select Receiver..." /></SelectTrigger>
                   <SelectContent>
                     {ingests.map(ing => (
@@ -495,63 +516,113 @@ export default function CollectorsPage() {
               </div>
             </div>
 
-            {/* 【核心修改】：全平台统一的结构化 Sources JSON 选择视图 */}
-            {availableSources.length > 0 ? (
-              <div className="border rounded-md p-4 bg-muted/20">
-                <Label className="mb-3 block text-sm font-semibold">Telemetry Sources</Label>
-                <div className="grid grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-2">
+            {/* 动态渲染的 Sources 列表与高级过滤面板 */}
+            {availableSources.length > 0 && (
+              <div className="border rounded-md p-4 bg-muted/10">
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-sm font-semibold">Telemetry Sources & Filtering</Label>
+                  <Badge variant="outline" className="text-[10px] font-mono bg-background">
+                    {availableSources.filter(s => s.enabled).length} selected
+                  </Badge>
+                </div>
+                
+                <div className="grid gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                   {availableSources.map(source => (
-                    <div key={source.type || source.path} className="flex items-start gap-2">
-                      <Checkbox 
-                        id={`source-${source.type}`}
-                        checked={source.enabled}
-                        onCheckedChange={() => toggleSource(source.type)}
-                        className="mt-1"
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <Label 
-                          htmlFor={`source-${source.type}`} 
-                          className="text-sm cursor-pointer font-medium"
-                        >
-                          {source.label}
-                        </Label>
-                        <p className="text-xs text-muted-foreground line-clamp-1 break-all" title={source.path}>
-                          {source.path}
-                        </p>
+                    <div 
+                      key={source.type || source.path} 
+                      className={`border rounded-md p-3 transition-colors ${source.enabled ? 'bg-card border-primary/50 shadow-sm' : 'bg-background hover:bg-muted/50'}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Checkbox 
+                          id={`source-${source.type}`}
+                          checked={source.enabled}
+                          onCheckedChange={() => toggleSource(source.type)}
+                          className="mt-1 data-[state=checked]:bg-primary"
+                        />
+                        <div className="grid gap-1 flex-1 cursor-pointer" onClick={() => toggleSource(source.type)}>
+                          <Label className="text-sm font-medium cursor-pointer">
+                            {source.label}
+                          </Label>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {source.path}
+                          </p>
+                        </div>
                       </div>
+
+                      {/* Windows 专属：高级过滤与场景预设 */}
+                      {source.enabled && formData.type === "windows" && (
+                        <div className="mt-3 ml-7 pl-3 border-l-2 border-primary/20 space-y-3 animate-in slide-in-from-top-1 fade-in duration-200">
+                          <div className="grid gap-1.5">
+                            <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                              <Filter className="w-3 h-3" />
+                              Target Event IDs (Optional)
+                            </Label>
+                            <Input 
+                              value={source.event_ids_str || ""}
+                              onChange={e => updateSourceConfig(source.type, 'event_ids_str', e.target.value)}
+                              placeholder="e.g. 4624, 4625, 4688 (Leave empty for ALL)" 
+                              className="h-8 text-xs font-mono bg-background"
+                            />
+                            
+                            {/* 动态渲染场景快捷标签 */}
+                            {source.presets && source.presets.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                {source.presets.map(preset => (
+                                  <Badge 
+                                    key={preset.name}
+                                    variant="secondary" 
+                                    className="text-[10px] cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                                    onClick={() => handlePresetClick(source, preset.ids)}
+                                  >
+                                    + {preset.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            
+                            <p className="text-[10px] text-muted-foreground leading-tight mt-1">
+                              Comma-separated list. Greatly reduces CPU usage by dropping unwanted events at the OS level.
+                            </p>
+                          </div>
+                          
+                          <div className="grid gap-1.5">
+                            <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                              <Server className="w-3 h-3" />
+                              Raw XPath Query (Advanced)
+                            </Label>
+                            <Input 
+                              value={source.query || ""}
+                              onChange={e => updateSourceConfig(source.type, 'query', e.target.value)}
+                              placeholder="e.g. EventID=4624 and EventData/Data[@Name='TargetUserName']='admin'" 
+                              className="h-8 text-xs font-mono bg-background"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
-            ) : (
-              // 容错回退机制：当后端没有预设 Source List 时使用老旧输入框
-              <div className="grid gap-2">
-                <Label>Event Channels (Legacy Input)</Label>
-                <Input 
-                  value={formData.channels} 
-                  onChange={e => setFormData({...formData, channels: e.target.value})}
-                  placeholder="Security,System,Application"
-                />
-              </div>
             )}
 
             <div className="grid gap-2">
-              <Label>OCSF Stream Fields (VictoriaLogs Indexing)</Label>
+              <Label>OCSF Stream Fields</Label>
               <Input 
                 value={formData.stream_fields} 
                 onChange={e => setFormData({...formData, stream_fields: e.target.value})} 
-                className="font-mono text-xs"
+                className="font-mono text-xs bg-muted/20"
+                readOnly
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Optimizes time-series indexing. Do not change unless you understand VictoriaLogs architecture.
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Hardcoded for optimal time-series indexing in VictoriaLogs.
               </p>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-2">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "Processing..." : editingConfig ? "Save Configuration" : "Create & Initialize"}
+              {submitting ? "Processing..." : editingConfig ? "Save Configuration" : "Create & Compile"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -2,6 +2,7 @@ package ingest
 
 import (
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,7 +26,7 @@ type workerEntry struct {
 
 var (
 	activeWorkers = make(map[uint]*workerEntry)
-	workerMu      sync.RWMutex // 改为读写锁，提升并发性能
+	workerMu      sync.RWMutex
 )
 
 // StartDispatcher 启动后台调度器
@@ -53,15 +54,18 @@ func processPayload(payload LogPayload) {
 	}
 	localEndpoint := vLogsAddr + "/insert/jsonline"
 
+	// 提取出纯净的配置字段进行比对
+	cleanFields := strings.TrimPrefix(payload.Config.StreamFields, "_stream_fields=")
+
 	workerMu.RLock()
 	w, ok := activeWorkers[id]
 	workerMu.RUnlock()
 
-	// 1. 如果配置变更，先停止旧实例 (双重检查锁定)
-	if ok && w.instance.url != localEndpoint {
+	// 1. 【核心修复】：如果配置的 StreamFields 发生实质变更，才停止旧实例
+	if ok && w.instance.streamFields != cleanFields {
 		workerMu.Lock()
-		if w, ok = activeWorkers[id]; ok && w.instance.url != localEndpoint {
-			log.Printf("Config changed for IngestID %d, restarting worker...", id)
+		if w, ok = activeWorkers[id]; ok && w.instance.streamFields != cleanFields {
+			log.Printf("Config changed for IngestID %d (fields: %s -> %s), restarting worker...", id, w.instance.streamFields, cleanFields)
 			w.instance.Stop()
 			delete(activeWorkers, id)
 			ok = false

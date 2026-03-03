@@ -1,8 +1,13 @@
 package ingest
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -10,32 +15,45 @@ import (
 
 type Ingest struct {
 	url           string
+	streamFields  string // 【新增】保存原始配置的 streamFields，用于判断配置是否真的变更
 	batchSize     int
 	flushInterval time.Duration
 	client        *http.Client
 	buffer        []interface{}
-	logChan       chan interface{} // 核心：用于接收调度器日志的缓冲通道
+	logChan       chan interface{}
 	wg            sync.WaitGroup
 	eventCount    int64
 	errorCount    int64
 }
 
-func NewIngest(url string, batchSize int, flushInterval time.Duration, fields string) *Ingest {
-	if len(url) > 0 {
-		sep := "?"
-		if strings.Contains(url, "?") {
-			sep = "&"
+func NewIngest(baseURL string, batchSize int, flushInterval time.Duration, fields string) *Ingest {
+	// 1. 清理可能带过来的前缀
+	cleanFields := strings.TrimPrefix(fields, "_stream_fields=")
+
+	// 2. 优雅且安全地构建带参数的 URL
+	finalURL := baseURL
+	u, err := url.Parse(baseURL)
+	if err == nil {
+		q := u.Query()
+		if cleanFields != "" {
+			q.Set("_stream_fields", cleanFields)
 		}
-		fields = strings.TrimPrefix(fields, "_stream_fields=")
-		url += sep + "_stream_fields=" + fields
+		// 【核心修复】：显式告诉 VictoriaLogs 如何解析 OCSF 标准日志
+		q.Set("_msg_field", "raw_data")
+		q.Set("_time_field", "time")
+
+		u.RawQuery = q.Encode()
+		finalURL = u.String()
 	}
+
 	return &Ingest{
-		url:           url,
+		url:           finalURL,
+		streamFields:  cleanFields, // 存下来给调度器做比对
 		batchSize:     batchSize,
 		flushInterval: flushInterval,
 		client:        &http.Client{Timeout: 10 * time.Second},
 		buffer:        make([]interface{}, 0, batchSize),
-		logChan:       make(chan interface{}, 2000), // 为每个 Worker 配置私有背压缓冲
+		logChan:       make(chan interface{}, 2000),
 	}
 }
 
@@ -87,13 +105,61 @@ func (i *Ingest) Flush() {
 	copy(events, i.buffer)
 	i.buffer = i.buffer[:0] // 复用底层数组
 
-	// 这里可以考虑加入重试机制 (Retries)
+	// 执行发往 VictoriaLogs 的请求
 	_ = i.sendBatch(events)
 }
 
+// sendBatch sends a batch of events to VictoriaLogs
 func (i *Ingest) sendBatch(logs []interface{}) error {
-	// 保持原有的 JSON 编码和 HTTP POST 逻辑不变
-	// ...
-	// (此处省略原有 sendBatch 的内部实现，保持不变即可)
+	if len(logs) == 0 {
+		return nil
+	}
+
+	// 1. Convert events to NDJSON (newline-delimited JSON)
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+
+	for _, logEntry := range logs {
+		if err := encoder.Encode(logEntry); err != nil {
+			i.errorCount++
+			log.Printf("Error encoding event: %v", err)
+			continue
+		}
+	}
+
+	// 2. Send to VictoriaLogs
+	req, err := http.NewRequest("POST", i.url, &buf)
+	if err != nil {
+		i.errorCount += int64(len(logs))
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// 推荐使用 application/stream+json 或 application/x-ndjson
+	req.Header.Set("Content-Type", "application/stream+json")
+
+	resp, err := i.client.Do(req)
+	if err != nil {
+		i.errorCount += int64(len(logs))
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// 3. 【核心优化】：如果 VictoriaLogs 拒绝写入，必须把底层的报错原因打印出来
+	// VictoriaLogs 成功通常返回 204 No Content，偶尔 200 或 202
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusAccepted {
+		i.errorCount += int64(len(logs))
+
+		// 读取 VL 吐出的详细错误信息
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		errDetail := string(bodyBytes)
+
+		log.Printf("[ERROR] VictoriaLogs rejected batch. Code: %d, Reason: %s", resp.StatusCode, errDetail)
+		return fmt.Errorf("victorialogs error %d: %s", resp.StatusCode, errDetail)
+	}
+
+	// 4. 更新统计并打印成功日志
+	i.eventCount += int64(len(logs))
+	log.Printf("Successfully sent %d events to VictoriaLogs (total: %d)", len(logs), i.eventCount)
+
 	return nil
 }

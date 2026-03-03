@@ -27,6 +27,7 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 - **Log Storage** - Powered by VictoriaLogs for high-performance storage
 - **Log Query** - Search and analyze logs with LogSQL
 - **Custom Tables** - Define custom log groupings using stream fields
+- **OCSF Support** - Open Cybersecurity Schema Framework compliant log normalization
 
 ### Detection & Response
 - **Detection Rules** - Create rules with cron-based scheduling
@@ -35,7 +36,7 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 
 ### Integrations
 - **Connectors** - Pre-built integrations for 24+ security tools
-- **Collectors** - Build log collectors for Windows, Linux, and macOS
+- **Collectors** - Build native Go agents for Windows, Linux, and macOS with OCSF output support
 
 ### Administration
 - **User Management** - Multi-user with role-based access
@@ -93,6 +94,11 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 <p align="center">
   <img src="docs/screenshots/readme-collectors.png" alt="Collectors" width="800">
   <br><em>构建跨平台日志采集器（Windows/Linux/macOS），一键生成配置文件</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/windows-collectors.png" alt="Windows Collector with OCSF" width="800">
+  <br><em>Windows Event Collector：原生 Go Agent，零依赖部署，支持 OCSF (Open Cybersecurity Schema Framework) 标准格式输出</em>
 </p>
 
 ### 8. Settings - 系统配置

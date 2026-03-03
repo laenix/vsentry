@@ -1,0 +1,25 @@
+package mapper
+
+import (
+	"github.com/laenix/vsentry/pkg/ocsf"
+)
+
+func init() {
+	// 4104: PowerShell 脚本块执行 (最核心的无文件攻击检测点)
+	Register([]int{4104}, mapPowerShell)
+}
+
+func mapPowerShell(unmapped map[string]interface{}, entry *ocsf.VSentryOCSFEvent) {
+	entry.CategoryName = ocsf.CategorySystem
+	entry.ClassName = "Process Activity" // 或者自定义 "Script Activity"
+	entry.ClassUID = ocsf.ClassProcessActivity
+	entry.ActivityName = "Execute Script"
+
+	// PowerShell 4104 最核心的是 ScriptBlockText，包含原始执行的脚本内容
+	scriptContent := GetStr(unmapped, "ScriptBlockText")
+
+	entry.Process = &ocsf.Process{
+		Name:    "powershell.exe",
+		CmdLine: scriptContent, // 脚本内容放进 CmdLine 以便检索
+	}
+}

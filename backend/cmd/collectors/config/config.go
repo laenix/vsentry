@@ -27,13 +27,18 @@ type SourceConfig struct {
 	Path         string `json:"path"`
 	Format       string `json:"format"`
 	Enabled      bool   `json:"enabled"`
-	ReadFromHead bool   `json:"read_from_head"` // 新增：是否收集历史存量日志
+	ReadFromHead bool   `json:"read_from_head"` // 是否收集历史存量日志
+
+	// 【新增】：高级过滤能力 (Windows EventLog 专用)
+	EventIDs []int  `json:"event_ids,omitempty"` // 只采集指定的 EventID (如: [4624, 4625, 4688])
+	Query    string `json:"query,omitempty"`     // 供高级用户直接编写的原生 XPath 过滤条件
 }
 
 var Global AgentConfig
 
 func Init() {
-	if len(bytes.TrimSpace(embeddedConfigBytes)) == 0 {
+	// 校验配置是否为空 (防止开发者在本地直接 go run 误启动)
+	if len(bytes.TrimSpace(embeddedConfigBytes)) == 0 || string(bytes.TrimSpace(embeddedConfigBytes)) == "{}" {
 		log.Fatal("Agent configuration missing! Must be compiled by VSentry Backend.")
 	}
 
@@ -42,6 +47,10 @@ func Init() {
 	}
 
 	Global.Hostname, _ = os.Hostname()
+	if Global.Hostname == "" {
+		Global.Hostname = "unknown-host"
+	}
+
 	if Global.Interval <= 0 {
 		Global.Interval = 5 // 默认 5 秒采集一次
 	}
