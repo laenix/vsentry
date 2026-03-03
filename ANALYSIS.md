@@ -1,7 +1,7 @@
 # VSentry 深度代码分析与发展建议
 
-> 分析日期：2025-03-02
-> 代码版本：main branch
+> 分析日期：2026-03-03
+> 代码版本：main branch (commit 22c280d6)
 > 维护者：Boris (安全工程师)
 
 ---
@@ -643,6 +643,162 @@ VSentry 是一个功能完整的 SIEM/SOAR 原型，核心闭环已打通：
 2. 规则模板 20+
 3. WebSocket 实时日志
 4. SOAR 动作扩展 (Slack, Webhook)
+
+---
+
+## 十一、2026-03-03 代码更新分析
+
+### 采集器 Mapper 重大重构
+
+本次更新对采集器模块进行了系统性重构，将原有的单文件拆分为独立的 Mapper 模块：
+
+#### 新增 Windows Mapper
+
+| 文件 | 描述 | 覆盖场景 |
+|------|------|----------|
+| `win_critical.go` | Critical Event 映射 | 系统关键事件 |
+| `win_defender.go` | Windows Defender | 防病毒告警 |
+| `win_file.go` | 文件操作审计 | 文件创建/修改/删除 |
+| `win_identity.go` | 身份认证事件 | 域账户、登录事件 |
+| `win_kerberos.go` | Kerberos 认证 | TGT/Service Ticket 事件 |
+| `win_network.go` | 网络连接事件 | 连接/断开、端口活动 |
+| `win_persistence.go` | 持久化驻留 | 注册表、服务、计划任务 |
+| `win_powershell.go` | PowerShell 执行 | 脚本执行、命令审计 |
+| `win_process.go` | 进程事件 | 进程创建/终止 |
+| `win_sysmon_advanced.go` | Sysmon 高级事件 | 进程链、网络流、文件操作 |
+
+#### 新增 Linux Mapper
+
+| 文件 | 描述 | 覆盖场景 |
+|------|------|----------|
+| `linux_auth.go` | SSH 认证日志 | 登录成功/失败、暴力破解 |
+| `linux_syslog.go` | 系统 Syslog | 通用系统日志 |
+
+#### 新增 macOS Mapper
+
+| 文件 | 描述 | 覆盖场景 |
+|------|------|----------|
+| `darwin_unified.go` | Unified Logging | Apple 统一日志系统 |
+
+#### 新增应用层 Mapper (跨平台)
+
+| 文件 | 描述 | 覆盖场景 |
+|------|------|----------|
+| `app_db.go` | 数据库日志 | MySQL 错误日志、Redis 日志 |
+| `app_tomcat.go` | Tomcat 日志 | 访问日志、错误日志 |
+| `app_web.go` | Web 服务器 | Nginx、Apache 访问/错误日志 |
+
+#### 架构改进
+
+1. **双引擎设计**：
+   - Windows: 基于 EventID 整数路由 (`registry map[int]MapFunc`)
+   - Linux/macOS: 基于 SourceType 字符串路由 (`textRegistry map[string]TextMapFunc`)
+
+2. **前端增强**：
+   - 新增 `CollectorTable.tsx` - 表格组件
+   - 新增 `CollectorDialog.tsx` - 配置弹窗
+   - 新增 `constants.ts` - 常量定义与图标映射
+   - 支持自定义路径回显
+
+3. **采集器架构优化**：
+   - OS 层 + App 层分离采集
+   - DLQ 死信队列网络恢复后自动重发
+
+---
+
+## 十二、功能矩阵更新
+
+### 采集器功能矩阵 (2026-03-03)
+
+| 能力 | Windows | Linux | macOS | App |
+|------|---------|-------|-------|-----|
+| 基本文件采集 | ❌ | ✅ | ❌ | ❌ |
+| Win32 API (EventLog) | ✅ | ❌ | ❌ | ❌ |
+| Unified Logging | ❌ | ❌ | ✅ | ❌ |
+| Syslog 协议 | ❌ | 规划中 | ❌ | ❌ |
+| 数据库日志 (MySQL/Redis) | ❌ | ❌ | ❌ | ✅ |
+| Web 服务器日志 | ❌ | ❌ | ❌ | ✅ |
+| 防病毒事件 (Defender) | ✅ | N/A | N/A | ❌ |
+| 身份认证事件 | ✅ | ✅ | ✅ | ❌ |
+| 进程监控 | ✅ | ❌ | ❌ | ❌ |
+| 网络连接监控 | ✅ | ❌ | ❌ | ❌ |
+| PowerShell 审计 | ✅ | N/A | N/A | ❌ |
+| OCSF 标准化 | ✅ | ✅ | ✅ | ✅ |
+
+### 已完成功能
+
+- ✅ Windows Event Collector (Win32 API)
+- ✅ Linux File Collector (tail -f)
+- ✅ macOS Unified Logging
+- ✅ App Layer Collector (Nginx, MySQL, Redis, Tomcat)
+- ✅ 跨平台 OCSF 标准化
+- ✅ 动态二进制编译
+- ✅ DLQ 本地持久化
+
+### 待完成功能
+
+- ❌ Linux Journald 直接采集
+- ❌ Linux Auditd 集成
+- ❌ Syslog 协议接收 (UDP/TCP)
+- ❌ 多实例采集器管理
+- ❌ 采集器状态、心跳监控
+
+---
+
+## 十三、后续发展建议
+
+### 短期 (1-3 个月)
+
+| 优先级 | 功能 | 说明 |
+|--------|------|------|
+| P0 | **Linux Journald 采集** | 直接读取 systemd journal，提升可靠性 |
+| P0 | **macOS 书签持久化** | 当前缺失，需完善 bookmark 管理 |
+| P1 | **采集器心跳/状态** | 服务端管理多个采集器运行状态 |
+| P1 | **Dark Mode** | 前端刚需，值班场景必备 |
+| P2 | **规则模板库** | 内置 20+ 检测规则，覆盖常见威胁 |
+
+### 中期 (3-6 个月)
+
+| 优先级 | 功能 | 说明 |
+|--------|------|------|
+| P1 | **WebSocket 实时日志** | 替代轮询，降低延迟 |
+| P2 | **SOAR 动作扩展** | Slack/Discord/飞书 Webhook |
+| P2 | **Connector 连通测试** | 真实测试 24+ 连接器可用性 |
+| P2 | **审计日志** | 记录所有管理操作 |
+| P3 | **规则导入/导出** | JSON/YAML 格式支持 |
+
+### 长期 (6-12 个月)
+
+| 优先级 | 功能 | 说明 |
+|--------|------|------|
+| P2 | **MITRE ATT&CK 映射** | 规则关联战术/技术 |
+| P3 | **Sigma 规则兼容** | 导入 Sigma 格式规则 |
+| P3 | **多租户支持** | SaaS 版本基础 |
+| P3 | **集群部署** | 高可用、多节点 |
+
+---
+
+## 十四、代码质量评估
+
+### 本次更新亮点
+
+- ✅ **Mapper 分离** - 职责清晰，易于扩展
+- ✅ **正则解析丰富** - SSH 暴力破解、数据库错误等场景覆盖
+- ✅ **OCSF 标准化** - 统一输出格式，兼容生态
+- ✅ **前后端解耦** - Collector 配置与构建流程完善
+
+### 改进建议
+
+```go
+// 1. Linux 采集器建议添加 systemd journal 直接读取
+// 参考库: github.com/coreos/go-systemd/v22/journal
+
+// 2. 采集器建议添加配置热加载
+// 而非每次配置修改都重新编译
+
+// 3. 建议添加采集器健康检查端点
+// GET /api/collectors/:id/health
+```
 
 ---
 
