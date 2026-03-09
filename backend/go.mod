@@ -1,6 +1,6 @@
 module github.com/laenix/vsentry
 
-go 1.23.0
+go 1.25.0
 
 require (
 	github.com/0xrawsec/golang-evtx v1.2.9

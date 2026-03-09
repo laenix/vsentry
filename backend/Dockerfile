@@ -1,7 +1,7 @@
 # ==========================================
 # 第一阶段：构建 VSentry 后端主程序
 # ==========================================
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /build
 
@@ -23,7 +23,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -trimpath -ldflags "-s -w" -o vsentry .
 # ==========================================
 # 第二阶段：构建最终运行时环境
 # ==========================================
-FROM golang:1.23-alpine
+FROM golang:1.25-alpine
 
 WORKDIR /app
 

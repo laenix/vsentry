@@ -56,9 +56,13 @@ export const forensicsService = {
     formData.append("task_id", String(taskId));
     formData.append("file", file);
 
+    // 根据文件大小动态调整超时，100MB 文件大概需要 2-3 分钟
+    const timeout = file.size > 50 * 1024 * 1024 ? 300000 : 60000;
+
     // Axios 在收到 FormData 时，会自动设置界限 (boundary) 并修改 Content-Type
     // 但为了严谨，我们显式声明它
     return apiClient.post<any, APIResponse<ForensicFile>>("/forensics/upload", formData, {
+      timeout,
       headers: {
         "Content-Type": "multipart/form-data",
       },

@@ -35,7 +35,11 @@ func main() {
 	scheduler.InitScheduler()            // 启动引擎
 	scheduler.GlobalEngine.ReloadRules() // 首次加载规则
 	// 5. 设置 Gin 引擎
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+	// 支持大文件上传 (100MB)
+	r.MaxMultipartMemory = 100 << 20
 	r = routers.CollectRouter(r)
 
 	// 6. 配置 HTTP Server 以支持优雅关机

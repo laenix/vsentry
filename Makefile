@@ -14,7 +14,7 @@ build: backend frontend
 # Build backend
 backend:
 	@echo "$(YELLOW)Building backend...$(NC)"
-	cd backend && CGO_ENABLED=0 go build -trimpath -o vsentry .
+	cd backend && CGO_ENABLED=1 go build -trimpath -o vsentry .
 	@echo "$(GREEN)Backend built: ./backend/vsentry$(NC)"
 
 # Build frontend

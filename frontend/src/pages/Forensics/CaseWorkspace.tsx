@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, UploadCloud, Search, Trash2, FileText, Network, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, UploadCloud, Search, Trash2, FileText, Network, AlertCircle, Loader2, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
