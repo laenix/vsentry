@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -145,6 +147,95 @@ func processForensicFile(f model.ForensicFile) {
 		"event_count":   len(parsedEvents),
 		"parse_message": "Successfully parsed and injected.",
 	})
+
+	// 4. 触发取证规则
+	go triggerForensicRules(f.TaskID, f.ID)
+}
+
+// triggerForensicRules 触发取证规则
+func triggerForensicRules(caseID, fileID uint) {
+	db := database.GetDB()
+
+	// 获取所有启用的取证规则
+	var rules []model.Rule
+	if err := db.Where("type = ? AND enabled = ?", "forensic", true).Find(&rules).Error; err != nil {
+		log.Printf("[Forensic] Failed to fetch rules: %v", err)
+		return
+	}
+
+	if len(rules) == 0 {
+		log.Printf("[Forensic] No forensic rules enabled")
+		return
+	}
+
+	vlURL := viper.GetString("victorialogs.url")
+	if vlURL == "" {
+		vlURL = "http://localhost:9428"
+	}
+
+	log.Printf("[Forensic] Triggering %d rules for file %d", len(rules), fileID)
+
+	for _, rule := range rules {
+		// 构建查询：限制为当前案件和文件
+		query := fmt.Sprintf("env:forensics case_id:%d file_id:%d | %s", caseID, fileID, rule.Query)
+
+		queryURL := fmt.Sprintf("%s/select/logsql/query?query=%s&limit=1000", vlURL, url.QueryEscape(query))
+
+		resp, err := http.Get(queryURL)
+		if err != nil || resp.StatusCode >= 400 {
+			log.Printf("[Forensic] Rule %d query failed: %v", rule.ID, err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var matchedData []map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&matchedData); err != nil {
+			log.Printf("[Forensic] Rule %d parse failed: %v", rule.ID, err)
+			continue
+		}
+
+		if len(matchedData) > 0 {
+			// 生成告警
+			saveForensicAlert(rule, caseID, fileID, matchedData)
+		}
+	}
+}
+
+// saveForensicAlert 保存取证告警
+func saveForensicAlert(rule model.Rule, caseID, fileID uint, matchedData []map[string]interface{}) {
+	db := database.GetDB()
+	now := time.Now().UTC()
+
+	// 创建 Incident
+	incident := model.Incident{
+		RuleID:     rule.ID,
+		Name:       fmt.Sprintf("[取证] %s - Case %d", rule.Name, caseID),
+		Severity:   rule.Severity,
+		Status:     "new",
+		FirstSeen: now,
+		LastSeen:   now,
+		AlertCount: len(matchedData),
+	}
+
+	if err := db.Create(&incident).Error; err != nil {
+		log.Printf("[Forensic] Failed to create incident: %v", err)
+		return
+	}
+
+	// 创建 Alert
+	for _, data := range matchedData {
+		content, _ := json.Marshal(data)
+		alert := model.Alert{
+			IncidentID:  incident.ID,
+			RuleID:      rule.ID,
+			Content:     string(content),
+			Fingerprint: fmt.Sprintf("%d-%d-%s", rule.ID, fileID, string(content[:min(len(content), 100)])),
+		}
+		db.Create(&alert)
+	}
+
+	log.Printf("[Forensic] Created incident %d with %d alerts for rule %d", incident.ID, len(matchedData), rule.ID)
 }
 
 // ListForensicTasks 获取所有取证案件列表
@@ -209,4 +300,73 @@ func DeleteForensicTask(ctx *gin.Context) {
 	db.Delete(&task)
 
 	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Task and related files deleted"})
+}
+
+// ExecuteForensicRules 执行取证规则
+type ExecuteForensicRulesRequest struct {
+	CaseID  uint   `json:"case_id" binding:"required"`
+	FileID  uint   `json:"file_id" binding:"required"`
+	RuleIDs []uint `json:"rule_ids" binding:"required"`
+}
+
+type ForensicRuleResult struct {
+	RuleID      uint                   `json:"rule_id"`
+	RuleName    string                 `json:"rule_name"`
+	Severity    string                 `json:"severity"`
+	MatchedData []map[string]interface{} `json:"matched_data"`
+	Count       int                    `json:"count"`
+}
+
+func ExecuteForensicRules(ctx *gin.Context) {
+	var req ExecuteForensicRulesRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid parameters"})
+		return
+	}
+
+	db := database.GetDB()
+	vlURL := viper.GetString("victorialogs.url")
+	if vlURL == "" {
+		vlURL = "http://localhost:9428"
+	}
+
+	// 获取选中的规则
+	var rules []model.Rule
+	if err := db.Where("id IN ? AND type = ? AND enabled = ?", req.RuleIDs, "forensic", true).Find(&rules).Error; err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Failed to fetch rules"})
+		return
+	}
+
+	results := make([]ForensicRuleResult, 0)
+
+	for _, rule := range rules {
+		// 构建查询：限制为当前案件和文件
+		query := fmt.Sprintf("env:forensics case_id:%d file_id:%d | %s", req.CaseID, req.FileID, rule.Query)
+		
+		// 调用 VictoriaLogs 查询
+		queryURL := fmt.Sprintf("%s/select/logsql/query?query=%s&limit=100", vlURL, url.QueryEscape(query))
+		
+		resp, err := http.Get(queryURL)
+		if err != nil || resp.StatusCode >= 400 {
+			continue
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var matchedData []map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&matchedData); err != nil {
+			continue
+		}
+
+		result := ForensicRuleResult{
+			RuleID:      rule.ID,
+			RuleName:    rule.Name,
+			Severity:    rule.Severity,
+			MatchedData: matchedData,
+			Count:       len(matchedData),
+		}
+		results = append(results, result)
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "data": results})
 }

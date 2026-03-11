@@ -44,7 +44,11 @@ func AddRule(ctx *gin.Context) {
 
 	// 自动设置初始元数据
 	rule.Version = 1
-	rule.Enabled = true // 默认开启
+	rule.Enabled = true
+	// 默认规则类型为报警规则
+	if rule.Type == "" {
+		rule.Type = "alert"
+	}
 
 	// 从中间件获取当前操作人 ID
 	userId, exists := ctx.Get("userid")
@@ -58,6 +62,12 @@ func AddRule(ctx *gin.Context) {
 		return
 	}
 	scheduler.GlobalEngine.ReloadRules()
+
+	// 如果启用了回溯，立即触发一次回溯
+	if rule.EnableBacktrace && rule.Type == "alert" {
+		go scheduler.TriggerBacktrace(rule.ID)
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "规则添加成功", "data": rule})
 }
 
@@ -92,7 +102,7 @@ func UpdateRule(ctx *gin.Context) {
 		}
 
 		// 使用 Select 指定允许更新的字段，防止恶意覆盖元数据
-		return tx.Model(&existing).Select("Name", "Description", "Query", "Interval", "Severity", "Version", "AuthorID").Updates(req).Error
+		return tx.Model(&existing).Select("Name", "Description", "Query", "Interval", "Severity", "Version", "AuthorID", "Type", "EnableBacktrace", "BacktraceCron", "BacktraceStart").Updates(req).Error
 	})
 
 	if err != nil {
@@ -104,6 +114,12 @@ func UpdateRule(ctx *gin.Context) {
 		return
 	}
 	scheduler.GlobalEngine.ReloadRules()
+
+	// 如果启用了回溯（新增或修改），立即触发一次回溯
+	if req.EnableBacktrace && req.Type == "alert" && req.Enabled {
+		go scheduler.TriggerBacktrace(req.ID)
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "规则更新成功"})
 }
 

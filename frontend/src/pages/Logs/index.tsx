@@ -31,12 +31,20 @@ const calcTimeRange = (rangeStr: string) => {
   return { start: start.toISOString(), end: now.toISOString() };
 };
 
-export default function LogsPage() {
+interface LogsPageProps {
+  tabData?: {
+    query?: string;
+    [key: string]: any;
+  };
+}
+
+export default function LogsPage({ tabData }: LogsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [query, setQuery] = useState("*");
   const [limit, setLimit] = useState("1000");
   const [timeRange, setTimeRange] = useState("5m");
+  const [step, setStep] = useState("");
   const [logs, setLogs] = useState<VLResult[]>([]);
   const [totalHits, setTotalHits] = useState<number>(0);
   const [loading, setLoading] = useState(false);
@@ -44,15 +52,30 @@ export default function LogsPage() {
   const [viewMode, setViewMode] = useState<"group" | "table" | "json">("table");
   const [editorHeight, setEditorHeight] = useState(120);
 
-  // 初始化逻辑 (保持不变)
+  // 初始化逻辑：优先使用 tabData，其次使用 URL params
   useEffect(() => {
-    const q = searchParams.get("q");
-    const t = searchParams.get("t");
-    const l = searchParams.get("l");
-    if (q) setQuery(decodeURIComponent(q));
-    if (t) setTimeRange(t);
-    if (l) setLimit(l);
-    if (q) setTimeout(() => handlerRun(decodeURIComponent(q), t || "5m", l || "1000"), 100);
+    // 1. 优先使用 Tab 传入的 query（来自 Deep Hunt 等场景）
+    let initialQuery = tabData?.query;
+    // Deep Hunt 跳转时默认查询过去1年
+    let initialTime = tabData?.query ? "365d" : "5m";
+    let initialLimit = "1000";
+
+    // 2. 如果没有 Tab data，则回退到 URL params
+    if (!initialQuery) {
+      const q = searchParams.get("q");
+      const t = searchParams.get("t");
+      const l = searchParams.get("l");
+      if (q) initialQuery = decodeURIComponent(q);
+      if (t) initialTime = t;
+      if (l) initialLimit = l;
+    }
+
+    if (initialQuery) {
+      setQuery(initialQuery);
+      setTimeRange(initialTime);
+      setLimit(initialLimit);
+      setTimeout(() => handlerRun(initialQuery, initialTime, initialLimit), 100);
+    }
   }, []);
 
   const handlerRun = useCallback(async (customQuery?: string, customTime?: string, customLimit?: string) => {
@@ -66,7 +89,7 @@ export default function LogsPage() {
       // 并行请求：数据 + 总数
       const [data, hits] = await Promise.all([
         runVLQuery(q, l, start, end),
-        runVLHits(q, start, end)
+        runVLHits(q, start, end, step)
       ]);
       setLogs(data);
       setTotalHits(hits);
@@ -76,7 +99,7 @@ export default function LogsPage() {
     } finally {
       setLoading(false);
     }
-  }, [query, timeRange, limit, setSearchParams]);
+  }, [query, timeRange, limit, step, setSearchParams]);
 
   // 自动刷新逻辑
   useEffect(() => {
@@ -130,6 +153,24 @@ export default function LogsPage() {
 
           <TimeRangePicker value={timeRange} onChange={setTimeRange} />
           <LimitSelector value={limit} onChange={setLimit} />
+
+          <div className="flex items-center gap-2 bg-background border rounded px-2 h-8">
+            <span className="text-[10px] text-muted-foreground font-medium uppercase">STEP:</span>
+            <select 
+              className="text-xs bg-transparent outline-none font-bold w-16 cursor-pointer" 
+              value={step} 
+              onChange={(e) => setStep(e.target.value)}
+            >
+              <option value="">Auto</option>
+              <option value="1m">1m</option>
+              <option value="5m">5m</option>
+              <option value="15m">15m</option>
+              <option value="1h">1h</option>
+              <option value="6h">6h</option>
+              <option value="12h">12h</option>
+              <option value="1d">1d</option>
+            </select>
+          </div>
 
           <div className="h-5 w-[1px] bg-border mx-1" />
 

@@ -22,6 +22,9 @@ type Incident struct {
 	ClosingClassification string `json:"closing_classification"`
 	ClosingComment        string `json:"closing_comment"`
 
+	// 关联的规则（用于获取规则类型）
+	Rule Rule `json:"rule,omitempty" gorm:"foreignKey:RuleID"`
+
 	// 核心：一对多关联。前端在拿到 Incident 详情时，可以直接拿到这个数组
 	Alerts []Alert `json:"alerts" gorm:"foreignKey:IncidentID"`
 }

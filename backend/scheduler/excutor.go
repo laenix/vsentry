@@ -107,3 +107,37 @@ func saveAlert(rule model.Rule, evidence string) {
 		go automation.DispatchByIncident(incident)
 	}
 }
+
+// ExecuteRuleWithQuery 使用指定查询执行规则（用于回溯）
+func ExecuteRuleWithQuery(rule model.Rule, query string) {
+	vLogsAddr := viper.GetString("victorialogs.url")
+	if vLogsAddr == "" {
+		vLogsAddr = "http://127.0.0.1:9428"
+	}
+
+	finalQuery := strings.TrimSpace(query)
+	log.Printf("[Rule:%d][Backtrace] Executing: %s", rule.ID, finalQuery)
+
+	// 发送给 VictoriaLogs
+	resp, err := http.PostForm(vLogsAddr+"/select/logsql/query", url.Values{
+		"query": {finalQuery},
+		"limit": {"1000"},
+	})
+	if err != nil {
+		log.Printf("[Rule:%d][Backtrace] Request failed: %v", rule.ID, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if len(body) == 0 {
+		return
+	}
+
+	if resp.StatusCode >= 400 {
+		log.Printf("[Rule:%d][Backtrace] Query Syntax Error: %s | Query: %s", rule.ID, string(body), finalQuery)
+		return
+	}
+
+	saveAlert(rule, string(body))
+}

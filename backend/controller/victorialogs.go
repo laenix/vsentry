@@ -80,10 +80,18 @@ func QueryVictoriaLogsHits(ctx *gin.Context) {
 	}
 
 	query := ctx.PostForm("query")
+	step := ctx.PostForm("step")
 
-	targetURL := vlURL + "/select/logsql/hits?" + url.Values{
-		"query": {query},
-	}.Encode()
+	// 构建查询参数
+	params := url.Values{}
+	if query != "" {
+		params.Set("query", query)
+	}
+	if step != "" {
+		params.Set("step", step)
+	}
+
+	targetURL := vlURL + "/select/logsql/hits?" + params.Encode()
 
 	req, err := http.NewRequest("POST", targetURL, ctx.Request.Body)
 	if err != nil {

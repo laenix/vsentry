@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Target, Server } from "lucide-react";
+import { Plus, Trash2, Target, Server, FlaskConical } from "lucide-react";
 
 interface ContextPanelProps {
   activeIncidentId: string | null | undefined;
@@ -14,6 +14,10 @@ interface ContextPanelProps {
   setNewVarValue: (val: string) => void;
   handleAddVar: () => void;
   handleRemoveVar: (key: string) => void;
+  // 取证上下文
+  forensicsCaseId?: number;
+  forensicsFileId?: number;
+  forensicsFileName?: string;
 }
 
 export function ContextPanel({
@@ -24,7 +28,10 @@ export function ContextPanel({
   setNewVarKey,
   setNewVarValue,
   handleAddVar,
-  handleRemoveVar
+  handleRemoveVar,
+  forensicsCaseId,
+  forensicsFileId,
+  forensicsFileName
 }: ContextPanelProps) {
   return (
     <div className="w-full md:w-80 flex flex-col gap-4 flex-none">
@@ -35,7 +42,14 @@ export function ContextPanel({
             Investigation Context
           </CardTitle>
           <CardDescription className="text-xs">
-            {activeIncidentId ? (
+            {/* 显示来源：告警 或 取证 */}
+            {forensicsCaseId ? (
+              <span className="flex items-center gap-1 text-purple-600 font-medium">
+                <FlaskConical className="w-3 h-3" /> 
+                取证案件 #{forensicsCaseId}
+                {forensicsFileName && <span className="text-muted-foreground"> - {forensicsFileName}</span>}
+              </span>
+            ) : activeIncidentId ? (
               <span className="flex items-center gap-1 text-primary/80 font-medium">
                 <Server className="w-3 h-3" /> Linked to Incident #{activeIncidentId}
               </span>

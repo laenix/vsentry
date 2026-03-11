@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { ruleService } from "@/services/rules";
+import { ruleService, type RuleType } from "@/services/rules";
 import type { DetectionRule } from "@/services/rules";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Edit, History, User } from "lucide-react"; // 新增图标
+import { Plus, Trash2, Edit, History, User, Filter } from "lucide-react"; // 新增图标
 import { toast } from "sonner";
 import { RuleDialog } from "./RuleDialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // 简单的日期格式化 helper
 const formatDate = (dateStr?: string) => {
@@ -22,6 +23,12 @@ export default function RulesPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<DetectionRule | null>(null);
+  const [typeFilter, setTypeFilter] = useState<RuleType | "all">("all");
+
+  // 根据类型筛选
+  const filteredRules = typeFilter === "all" 
+    ? rules 
+    : rules.filter(r => (r.type || "alert") === typeFilter);
 
   const fetchRules = async () => {
     try {
@@ -77,9 +84,25 @@ export default function RulesPage() {
           <h1 className="text-2xl font-bold">Detection Rules</h1>
           <p className="text-muted-foreground text-sm">Manage SIEM detection logic and alerting policies.</p>
         </div>
-        <Button onClick={() => { setEditingRule(null); setDialogOpen(true); }}>
-          <Plus className="w-4 h-4 mr-2" /> New Rule
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as RuleType | "all")}>
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="alert">报警规则</SelectItem>
+                <SelectItem value="forensic">取证规则</SelectItem>
+                <SelectItem value="investigation">调查规则</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => { setEditingRule(null); setDialogOpen(true); }}>
+            <Plus className="w-4 h-4 mr-2" /> New Rule
+          </Button>
+        </div>
       </div>
 
       <div className="border rounded-md bg-card flex-1 overflow-auto">
@@ -88,6 +111,7 @@ export default function RulesPage() {
             <TableRow className="bg-muted/5">
               <TableHead className="w-[50px]">ID</TableHead>
               <TableHead className="min-w-[150px]">Rule Name</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Query (LogSQL)</TableHead>
               <TableHead>Severity</TableHead>
               {/* 新增列 */}
@@ -99,14 +123,27 @@ export default function RulesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Array.isArray(rules) && rules.map((rule) => {
+            {Array.isArray(filteredRules) && filteredRules.map((rule) => {
               const id = getRuleID(rule);
+              const ruleType = rule.type || "alert";
               return (
                 <TableRow key={id}>
                   <TableCell className="font-mono text-xs text-muted-foreground">#{id}</TableCell>
                   <TableCell>
                     <div className="font-medium">{rule.name}</div>
                     {rule.description && <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">{rule.description}</div>}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={
+                      ruleType === 'alert' ? 'border-blue-500 text-blue-500 bg-blue-500/10' :
+                        ruleType === 'forensic' ? 'border-purple-500 text-purple-500 bg-purple-500/10' :
+                          'border-green-500 text-green-500 bg-green-500/10'
+                    }>
+                      {ruleType === 'alert' ? '报警' : ruleType === 'forensic' ? '取证' : '调查'}
+                    </Badge>
+                    {rule.enable_backtrace && ruleType === 'alert' && (
+                      <span className="ml-1 text-[10px] text-orange-500" title="Backtrace enabled">↺</span>
+                    )}
                   </TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground truncate max-w-[200px]" title={rule.query}>
                     {rule.query}

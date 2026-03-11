@@ -17,6 +17,7 @@ import SettingsPage from "@/pages/Settings"
 
 // ✅ 新增导入 ForensicsPage
 import ForensicsPage from "@/pages/Forensics"
+import ForensicInvestigationPage from "@/pages/Forensics/ForensicInvestigation"
 
 export function TabContent() {
   const { tabs, activeTabId, setActiveTab, removeTab } = useTabStore()
@@ -25,9 +26,10 @@ export function TabContent() {
   const renderContent = (type: string, tabId: string, tabData: any) => {
     switch (type) {
       case 'dashboard':     return <DashboardPage />
-      case 'logs':          return <LogsPage />
+      case 'logs':          return <LogsPage tabData={tabData} />
       case 'investigation': return <InvestigationPage tabData={tabData} /> 
       case 'forensics':     return <ForensicsPage />
+      case 'forensic_investigation': return <ForensicInvestigationPage tabData={tabData} />
       case 'rules':         return <RulesPage />
       case 'incidents':     return <IncidentsPage />
       case 'automation':    return <AutomationPage />

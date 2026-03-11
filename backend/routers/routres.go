@@ -182,6 +182,7 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		
 		forensicsGroup.POST("/upload", controller.UploadForensicFile)
 		forensicsGroup.DELETE("/files/:id", controller.DeleteForensicFile)
+		forensicsGroup.POST("/execute-rules", controller.ExecuteForensicRules)
 	}
 	// automation
 	automation := r.Group("/playbooks", middleware.AuthMiddleware())

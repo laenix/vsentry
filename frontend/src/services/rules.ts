@@ -1,6 +1,8 @@
 import { apiClient } from "@/lib/api/vsentry-client";
 import type { APIResponse } from "@/lib/api/vsentry-client";
 
+export type RuleType = "alert" | "forensic" | "investigation";
+
 export interface DetectionRule {
   // GORM Model 默认是大写，兼容处理
   ID?: number; 
@@ -11,14 +13,22 @@ export interface DetectionRule {
 
   // 你的自定义字段 (json tag 是小写)
   name: string;
-  description?: string; // 新增描述
+  description?: string;
   query: string;
   interval: string;
   severity: string;
   enabled: boolean;
-  version: number;     // 新增版本
-  author_id: number;   // 新增作者ID
+  version: number;
+  author_id: number;
   source?: string;
+
+  // 规则类型: alert / forensic / investigation
+  type?: RuleType;
+
+  // 回溯配置（仅报警规则）
+  enable_backtrace?: boolean;
+  backtrace_cron?: string;
+  backtrace_start?: string;
 }
 
 export const ruleService = {

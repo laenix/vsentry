@@ -26,8 +26,9 @@ func GetIncidentDetail(ctx *gin.Context) {
 
 	var incident model.Incident
 	// 使用 Preload("Alerts") 自动执行关联查询，获取该事件下的所有证据
+	// 使用 Preload("Rule") 获取关联的规则信息（包括规则类型）
 	db := database.GetDB()
-	err := db.Preload("Alerts").First(&incident, id).Error
+	err := db.Preload("Alerts").Preload("Rule").First(&incident, id).Error
 
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "未找到相关事件记录"})

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { investigationService, type InvestigationTemplate } from "@/services/investigation";
 import { incidentService } from "@/services/incidents";
+import { forensicsService } from "@/services/forensics";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,10 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
   const [searchParams] = useSearchParams();
   const urlIncidentId = searchParams.get("incident_id");
   const activeIncidentId = tabData?.incident_id?.toString() || urlIncidentId;
+  
+  // 取证上下文
+  const forensicsCaseId = tabData?.case_id;
+  const forensicsFileId = tabData?.file_id;
 
   // 2. 核心状态池
   const [templates, setTemplates] = useState<InvestigationTemplate[]>([]);
@@ -25,6 +30,7 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
   
   // Incident 完整数据与 Alert 切换状态
   const [incidentData, setIncidentData] = useState<any>(null);
+  const [forensicsData, setForensicsData] = useState<any>(null);
   const [selectedAlertIdx, setSelectedAlertIndex] = useState<string>("0");
 
   // 左侧情报面板的变量池
@@ -58,6 +64,13 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
     }
   }, [activeIncidentId]);
 
+  // 页面加载时抓取取证数据
+  useEffect(() => {
+    if (forensicsCaseId && Object.keys(contextVars).length === 0) {
+      loadForensicsContext(forensicsCaseId, forensicsFileId);
+    }
+  }, [forensicsCaseId, forensicsFileId]);
+
   const loadIncidentContext = async (id: string) => {
     try {
       const res = await incidentService.detail(Number(id));
@@ -67,6 +80,33 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
       }
     } catch (err) { 
       console.error("Auto extract failed", err); 
+    }
+  };
+
+  const loadForensicsContext = async (caseId: number, fileId?: number) => {
+    try {
+      const res = await forensicsService.getTask(caseId);
+      if (res.code === 200 && res.data) {
+        setForensicsData(res.data);
+        
+        // 提取文件信息作为上下文
+        const file = fileId 
+          ? res.data.files?.find((f: any) => f.id === fileId)
+          : res.data.files?.[0];
+        
+        if (file) {
+          const vars: Record<string, string> = {
+            case_id: String(caseId),
+            file_id: String(file.id),
+            file_type: file.file_type,
+            file_name: file.original_name,
+            event_count: String(file.event_count || 0),
+          };
+          setContextVars(vars);
+        }
+      }
+    } catch (err) {
+      console.error("Load forensics context failed", err);
     }
   };
 
@@ -250,6 +290,9 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
           setNewVarValue={setNewVarValue}
           handleAddVar={handleAddVar}
           handleRemoveVar={handleRemoveVar}
+          forensicsCaseId={forensicsCaseId}
+          forensicsFileId={forensicsFileId}
+          forensicsFileName={forensicsData?.files?.find((f: any) => f.id === forensicsFileId)?.original_name}
         />
       </div>
 

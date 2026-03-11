@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { LogSQLEditor } from "@/components/editor/LogSQLEditor"
-import { ruleService } from "@/services/rules"
+import { ruleService, type RuleType } from "@/services/rules"
 import type { DetectionRule } from "@/services/rules"
 import { runVLQuery } from "@/lib/api/vl-client" // ✅ 引入日志查询 API
 import { toast } from "sonner"
@@ -42,6 +42,20 @@ const SEVERITY_OPTIONS = [
   { value: "low", label: "Low", color: "text-blue-500" },
 ]
 
+const RULE_TYPE_OPTIONS = [
+  { value: "alert", label: "报警规则", desc: "按 Cron 定时执行检测" },
+  { value: "forensic", label: "取证规则", desc: "证据上传后自动触发" },
+  { value: "investigation", label: "调查规则", desc: "手动选择执行" },
+]
+
+const BACKTRACE_START_OPTIONS = [
+  { value: "1y", label: "1年前" },
+  { value: "180d", label: "180天前" },
+  { value: "90d", label: "90天前" },
+  { value: "30d", label: "30天前" },
+  { value: "7d", label: "7天前" },
+]
+
 export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleDialogProps) {
   const isEditMode = !!initialData
   const [loading, setLoading] = useState(false)
@@ -54,7 +68,11 @@ export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleD
   const [query, setQuery] = useState("")
   const [severity, setSeverity] = useState("medium")
   const [enabled, setEnabled] = useState(true)
-  const [interval, setInterval] = useState("0 */5 * * * *") 
+  const [interval, setInterval] = useState("0 */5 * * * *")
+  const [ruleType, setRuleType] = useState<RuleType>("alert")
+  const [enableBacktrace, setEnableBacktrace] = useState(false)
+  const [backtraceCron, setBacktraceCron] = useState("0 2 * * *")
+  const [backtraceStart, setBacktraceStart] = useState("1y")
 
   useEffect(() => {
     if (open) {
@@ -66,6 +84,10 @@ export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleD
         setSeverity(initialData.severity)
         setInterval(initialData.interval)
         setEnabled(initialData.enabled)
+        setRuleType((initialData.type as RuleType) || "alert")
+        setEnableBacktrace(initialData.enable_backtrace || false)
+        setBacktraceCron(initialData.backtrace_cron || "0 2 * * *")
+        setBacktraceStart(initialData.backtrace_start || "1y")
       } else {
         setName("")
         setDescription("")
@@ -73,6 +95,10 @@ export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleD
         setSeverity("medium")
         setInterval("0 */5 * * * *")
         setEnabled(true)
+        setRuleType("alert")
+        setEnableBacktrace(false)
+        setBacktraceCron("0 2 * * *")
+        setBacktraceStart("1y")
       }
     }
   }, [open, initialData])
@@ -131,6 +157,10 @@ export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleD
         severity,
         interval,
         enabled,
+        type: ruleType,
+        enable_backtrace: enableBacktrace,
+        backtrace_cron: backtraceCron,
+        backtrace_start: backtraceStart,
       }
 
       if (isEditMode && initialData) {
@@ -189,6 +219,23 @@ export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleD
 
             <div className="space-y-3">
               <div className="space-y-2">
+                <Label>Rule Type</Label>
+                <Select value={ruleType} onValueChange={(v) => setRuleType(v as RuleType)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {RULE_TYPE_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{opt.label}</span>
+                          <span className="text-xs text-muted-foreground">{opt.desc}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Severity</Label>
                 <Select value={severity} onValueChange={setSeverity}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -226,6 +273,46 @@ export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleD
                   </div>
                 </div>
               </div>
+
+              {/* 回溯配置 - 仅报警规则显示 */}
+              {ruleType === "alert" && (
+                <div className="space-y-3 border-t pt-4 mt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">Enable Backtrace</Label>
+                      <p className="text-xs text-muted-foreground">Trigger historical detection for past data</p>
+                    </div>
+                    <Switch checked={enableBacktrace} onCheckedChange={setEnableBacktrace} />
+                  </div>
+
+                  {enableBacktrace && (
+                    <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3 rounded-lg">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Backtrace Schedule (Cron)</Label>
+                        <Input 
+                          value={backtraceCron}
+                          onChange={(e) => setBacktraceCron(e.target.value)}
+                          className="font-mono text-xs"
+                          placeholder="0 2 * * *"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Start From</Label>
+                        <Select value={backtraceStart} onValueChange={setBacktraceStart}>
+                          <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {BACKTRACE_START_OPTIONS.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

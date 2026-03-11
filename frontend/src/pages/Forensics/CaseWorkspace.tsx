@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, UploadCloud, Search, Trash2, FileText, Network, AlertCircle, Loader2, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, UploadCloud, Search, Trash2, FileText, Network, AlertCircle, Loader2, CheckCircle2, Clock, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -83,10 +83,20 @@ export function CaseWorkspace({ caseId, onBack }: CaseWorkspaceProps) {
     }
   };
 
+  // 跳转到取证调查页面
+  const handleAnalyze = (file: ForensicFile) => {
+    addTab('forensic_investigation', `分析: ${file.original_name}`, {
+      case_id: caseId,
+      file_id: file.id,
+      file_type: file.file_type,
+      file_name: file.original_name,
+    });
+  };
+
   // ✅ 核心联动：一键跳转 LogSQL 查询
   const handleHuntInSandbox = () => {
-    // 利用 VictoriaLogs 的强大能力，限定只查当前沙箱隔离环境的数据
-    const sandboxQuery = `env="forensics" AND task_id="${caseId}"`;
+    // VictoriaLogs LogSQL 语法：使用冒号 : 分隔字段和值，| 表示 OR
+    const sandboxQuery = `env:forensics | task_id:${caseId}`;
     addTab('logs', `Hunt: ${task?.name}`, { query: sandboxQuery });
   };
 
@@ -194,6 +204,18 @@ export function CaseWorkspace({ caseId, onBack }: CaseWorkspaceProps) {
                           {file.event_count > 0 ? file.event_count : "-"}
                         </TableCell>
                         <TableCell className="text-right">
+                          {/* 分析按钮 - 仅解析完成的文件可分析 */}
+                          {file.parse_status === 'completed' && file.event_count > 0 && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 px-2 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50 mr-2"
+                              onClick={() => handleAnalyze(file)}
+                            >
+                              <FlaskConical className="w-3 h-3 mr-1" />
+                              分析
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteFile(file.id)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>

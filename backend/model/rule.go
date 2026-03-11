@@ -13,6 +13,14 @@ type Rule struct {
 	Version     int64  `json:"version"`
 	AuthorID    uint   `json:"author_id"`
 	Source      string `json:"source"`
+
+	// 规则类型: alert(报警规则) / forensic(取证规则) / investigation(调查规则)
+	Type string `json:"type" gorm:"default:alert"`
+
+	// 回溯配置（仅报警规则使用）
+	EnableBacktrace bool   `json:"enable_backtrace"`
+	BacktraceCron   string `json:"backtrace_cron"`
+	BacktraceStart  string `json:"backtrace_start"` // 如 "1y", "30d", "2025-01-01"
 }
 
 type RuleTag struct {

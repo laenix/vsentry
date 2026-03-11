@@ -45,6 +45,21 @@ function buildParams(query: string, start?: string, end?: string, limit?: number
 }
 
 /**
+ * 构建 Hits 查询参数 (需要 step 参数)
+ */
+function buildHitsParams(query: string, start?: string, end?: string, step?: string): URLSearchParams {
+  const params = new URLSearchParams();
+  params.append("query", query);
+  if (start) params.append("start", start);
+  if (end) params.append("end", end);
+  // step 参数用于 hits 时间直方图，不传则自动计算
+  if (step && step !== "auto") {
+    params.append("step", step);
+  }
+  return params;
+}
+
+/**
  * 1. 查询日志或聚合数据 (POST /select/logsql/query)
  * 支持泛型 T，用于自动推断聚合查询的返回结构
  * 注意：现在通过后端 API 代理到 VictoriaLogs
@@ -118,10 +133,11 @@ export async function runVLQuery<T = VLResult>(
 export async function runVLHits(
   query: string,
   start?: string,
-  end?: string
+  end?: string,
+  step?: string
 ): Promise<number> {
   try {
-    const body = buildParams(query, start, end);
+    const body = buildHitsParams(query, start, end, step);
     const response = await fetch("/api/select/logsql/hits", {
       method: "POST",
       headers: {

@@ -64,7 +64,7 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 
 ### 3. Rules - Detection Rules
 <p align="center">
-  <img src="docs/screenshots/readme-rules-page.png" alt="Rules List" width="800">
+  <img src="docs/screenshots/s4-rules.png" alt="Rules List" width="800">
   <br><em>Rules list page showing all detection rules and their status</em>
 </p>
 
@@ -86,23 +86,34 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 
 ### 5. Investigation - Security Investigation Center
 <p align="center">
-  <img src="docs/screenshots/Investigation-detail.png" alt="Investigation" width="800">
+  <img src="docs/screenshots/s3-investigation.png" alt="Investigation" width="800">
   <br><em>Security investigation center: timeline view, directive suggestions, context panel, and pre-built investigation templates</em>
 </p>
 
-### 6. Automation - SOAR
+### 6. Forensics - Digital Evidence Analysis
+<p align="center">
+  <img src="docs/screenshots/s1-forensics.png" alt="Forensics List" width="800">
+  <br><em>Digital forensics center: upload and analyze EVTX, PCAP, and text files with automatic parsing</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/s2-workspace.png" alt="Forensics Workspace" width="800">
+  <br><em>Forensics workspace: timeline analysis, artifact extraction, and evidence correlation</em>
+</p>
+
+### 7. Automation - SOAR
 <p align="center">
   <img src="docs/screenshots/readme-automation.png" alt="Automation" width="800">
   <br><em>Visual workflow orchestration connecting detection rules to response actions (HTTP, email, conditions)</em>
 </p>
 
-### 7. Ingest - Log Endpoints
+### 8. Ingest - Log Endpoints
 <p align="center">
   <img src="docs/screenshots/readme-ingest.png" alt="Ingest" width="800">
   <br><em>Log endpoint management: generate API addresses and auth tokens for collectors to push logs</em>
 </p>
 
-### 8. Collectors - Log Agents
+### 9. Collectors - Log Agents
 <p align="center">
   <img src="docs/screenshots/readme-collectors.png" alt="Collectors" width="800">
   <br><em>Build cross-platform log collectors (Windows/Linux/macOS) with one-click config generation</em>
@@ -123,7 +134,7 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
   <br><em>Linux Event Collector: Native Go agent, supports syslog, auditd, and OCSF format output</em>
 </p>
 
-### 9. Settings
+### 10. Settings
 <p align="center">
   <img src="docs/screenshots/readme-settings.png" alt="Settings" width="800">
   <br><em>System administration: user management, collector config, appearance settings</em>
