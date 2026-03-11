@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 // 简单的日期格式化 helper
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return "-";
-  return new Date(dateStr).toLocaleString('zh-CN', {
+  return new Date(dateStr).toLocaleString('en-US', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 };
@@ -93,9 +93,9 @@ export default function RulesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="alert">报警规则</SelectItem>
-                <SelectItem value="forensic">取证规则</SelectItem>
-                <SelectItem value="investigation">调查规则</SelectItem>
+                <SelectItem value="alert">Alert Rules</SelectItem>
+                <SelectItem value="forensic">Forensic Rules</SelectItem>
+                <SelectItem value="investigation">Investigation Rules</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -139,7 +139,7 @@ export default function RulesPage() {
                         ruleType === 'forensic' ? 'border-purple-500 text-purple-500 bg-purple-500/10' :
                           'border-green-500 text-green-500 bg-green-500/10'
                     }>
-                      {ruleType === 'alert' ? '报警' : ruleType === 'forensic' ? '取证' : '调查'}
+                      {ruleType === 'alert' ? 'Alert' : ruleType === 'forensic' ? 'Forensic' : 'Investigation'}
                     </Badge>
                     {rule.enable_backtrace && ruleType === 'alert' && (
                       <span className="ml-1 text-[10px] text-orange-500" title="Backtrace enabled">↺</span>

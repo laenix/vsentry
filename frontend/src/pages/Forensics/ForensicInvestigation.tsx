@@ -99,7 +99,7 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
 
   const handleExecute = async () => {
     if (selectedRules.length === 0) {
-      toast.warning("请至少选择一个取证规则");
+      toast.warning("Please select at least one forensic rule");
       return;
     }
 
@@ -123,12 +123,12 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
           _time: new Date().toISOString(),
         }));
         setResults(ruleResults);
-        toast.success(`分析完成，发现 ${ruleResults.length} 条结果`);
+        toast.success(`Analysis complete. Found ${ruleResults.length} results`);
       } else {
         throw new Error(res.msg || "执行失败");
       }
     } catch (e: any) {
-      toast.error("分析失败", { description: e.message });
+      toast.error("Analysis failed", { description: e.message });
     } finally {
       setExecuting(false);
     }
@@ -150,7 +150,7 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
   if (!tabData) {
     return (
       <div className="p-6 flex items-center justify-center h-full">
-        <p className="text-muted-foreground">缺少分析参数</p>
+        <p className="text-muted-foreground">Missing analysis parameters</p>
       </div>
     );
   }
@@ -166,7 +166,7 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
           <div>
             <h1 className="text-lg font-bold flex items-center gap-2">
               <FlaskConical className="w-5 h-5 text-purple-500" />
-              取证分析
+              Forensic Analysis
             </h1>
             <p className="text-sm text-muted-foreground">
               {tabData.file_name}
@@ -185,18 +185,18 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
       </div>
 
       <div className="flex-1 flex gap-6 min-h-0">
-        {/* 左侧：取证规则选择 */}
+        {/* Left: Forensic Rule Selection */}
         <div className="w-80 flex flex-col gap-4">
           <Card className="flex-1 flex flex-col">
             <CardHeader className="py-3 border-b">
-              <CardTitle className="text-sm">取证规则</CardTitle>
-              <CardDescription className="text-xs">选择要执行的取证规则</CardDescription>
+              <CardTitle className="text-sm">Forensic Rules</CardTitle>
+              <CardDescription className="text-xs">Select forensic rules to execute</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 p-0 overflow-hidden">
               <ScrollArea className="h-full">
                 {rules.length === 0 ? (
                   <div className="p-4 text-center text-muted-foreground text-sm">
-                    暂无启用的取证规则
+                    No enabled forensic rules
                   </div>
                 ) : (
                   <div className="p-2 space-y-2">
@@ -244,29 +244,29 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
             {executing ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                分析中...
+                Analyzing...
               </>
             ) : (
               <>
                 <Play className="w-4 h-4 mr-2" />
-                执行分析 ({selectedRules.length})
+                Run Analysis ({selectedRules.length})
               </>
             )}
           </Button>
         </div>
 
-        {/* 右侧：分析结果时间线 */}
+        {/* Right: Analysis Results Timeline */}
         <Card className="flex-1 flex flex-col">
           <CardHeader className="py-3 border-b">
-            <CardTitle className="text-sm">分析结果</CardTitle>
-            <CardDescription className="text-xs">取证规则检测结果</CardDescription>
+            <CardTitle className="text-sm">Analysis Results</CardTitle>
+            <CardDescription className="text-xs">Forensic rule detection results</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-hidden">
             <ScrollArea className="h-full">
               {results.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
                   <FlaskConical className="w-10 h-10 opacity-20" />
-                  <p className="text-sm">选择规则并执行分析</p>
+                  <p className="text-sm">Select rules and run analysis</p>
                 </div>
               ) : (
                 <div className="p-4 space-y-3">
@@ -289,7 +289,7 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
                         <div className="flex items-center gap-2">
                           <Clock className="w-3 h-3 text-muted-foreground" />
                           <span className="text-xs text-muted-foreground">
-                            {new Date(result._time).toLocaleString('zh-CN')}
+                            {new Date(result._time).toLocaleString('en-US')}
                           </span>
                         </div>
                       </div>

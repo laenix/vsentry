@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return "-";
-  return new Date(dateStr).toLocaleString("zh-CN", {
+  return new Date(dateStr).toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     hour: "2-digit",

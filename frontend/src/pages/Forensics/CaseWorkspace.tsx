@@ -85,7 +85,7 @@ export function CaseWorkspace({ caseId, onBack }: CaseWorkspaceProps) {
 
   // 跳转到取证调查页面
   const handleAnalyze = (file: ForensicFile) => {
-    addTab('forensic_investigation', `分析: ${file.original_name}`, {
+    addTab('forensic_investigation', `Analysis: ${file.original_name}`, {
       case_id: caseId,
       file_id: file.id,
       file_type: file.file_type,
@@ -213,7 +213,7 @@ export function CaseWorkspace({ caseId, onBack }: CaseWorkspaceProps) {
                               onClick={() => handleAnalyze(file)}
                             >
                               <FlaskConical className="w-3 h-3 mr-1" />
-                              分析
+                              Analyze
                             </Button>
                           )}
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteFile(file.id)}>

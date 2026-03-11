@@ -1,12 +1,11 @@
 services:
-  # VictoriaLogs for log storage
+  # VictoriaLogs for log storage (in-memory, no persistence)
   victorialogs:
     image: victoriametrics/victoria-logs:latest
     container_name: vsentry-victorialogs
     ports:
       - "9428:9428"
-    volumes:
-      - victorialogs-data:/victoria-logs-data
+    # No volume = in-memory only, data lost on restart
     command:
       - -httpListenAddr=:9428
       - -storageDataPath=/victoria-logs-data
@@ -42,7 +41,6 @@ services:
       - vsentry-network
 
 volumes:
-  victorialogs-data:
   vsentry-data:
 
 networks:

@@ -112,6 +112,13 @@ func ExecuteInvestigation(ctx *gin.Context) {
 	// 2. 初始化变量池 (Variables Pool)
 	vars := make(map[string]string)
 
+	// 设置默认时间范围（如果模板需要时间参数但未提供）
+	// 使用过去1年到未来1年，覆盖绝大多数取证场景
+	oneYearAgo := time.Now().AddDate(-1, 0, 0).UTC().Format(time.RFC3339)
+	oneYearLater := time.Now().AddDate(1, 0, 0).UTC().Format(time.RFC3339)
+	vars["start_time"] = oneYearAgo
+	vars["end_time"] = oneYearLater
+
 	// 3. 加载 Incident 及其关联的 Alerts
 	if req.IncidentID > 0 {
 		var incident model.Incident

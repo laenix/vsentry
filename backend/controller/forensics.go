@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -176,8 +177,8 @@ func triggerForensicRules(caseID, fileID uint) {
 	log.Printf("[Forensic] Triggering %d rules for file %d", len(rules), fileID)
 
 	for _, rule := range rules {
-		// 构建查询：限制为当前案件和文件
-		query := fmt.Sprintf("env:forensics case_id:%d file_id:%d | %s", caseID, fileID, rule.Query)
+		// 构建查询：限制为当前案件和文件，不限制时间
+		query := fmt.Sprintf("env:forensics task_id:%d forensic_file_id:%d | %s", caseID, fileID, rule.Query)
 
 		queryURL := fmt.Sprintf("%s/select/logsql/query?query=%s&limit=1000", vlURL, url.QueryEscape(query))
 
@@ -188,11 +189,19 @@ func triggerForensicRules(caseID, fileID uint) {
 		}
 		defer resp.Body.Close()
 
-		// 解析响应
+		// VictoriaLogs 返回 NDJSON 格式，需要逐行解析
 		var matchedData []map[string]interface{}
-		if err := json.NewDecoder(resp.Body).Decode(&matchedData); err != nil {
-			log.Printf("[Forensic] Rule %d parse failed: %v", rule.ID, err)
-			continue
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if line == "" {
+				continue
+			}
+			var record map[string]interface{}
+			if err := json.Unmarshal([]byte(line), &record); err != nil {
+				continue
+			}
+			matchedData = append(matchedData, record)
 		}
 
 		if len(matchedData) > 0 {
@@ -340,22 +349,32 @@ func ExecuteForensicRules(ctx *gin.Context) {
 	results := make([]ForensicRuleResult, 0)
 
 	for _, rule := range rules {
-		// 构建查询：限制为当前案件和文件
-		query := fmt.Sprintf("env:forensics case_id:%d file_id:%d | %s", req.CaseID, req.FileID, rule.Query)
+		// 构建查询：限制为当前案件和文件，不限制时间（取证数据可能来自任意时间）
+		query := fmt.Sprintf("env:forensics task_id:%d forensic_file_id:%d | %s", req.CaseID, req.FileID, rule.Query)
 		
 		// 调用 VictoriaLogs 查询
 		queryURL := fmt.Sprintf("%s/select/logsql/query?query=%s&limit=100", vlURL, url.QueryEscape(query))
 		
 		resp, err := http.Get(queryURL)
 		if err != nil || resp.StatusCode >= 400 {
+			log.Printf("VictoriaLogs query failed: %v, status: %d", err, resp.StatusCode)
 			continue
 		}
 		defer resp.Body.Close()
 
-		// 解析响应
+		// VictoriaLogs 返回 NDJSON 格式，需要逐行解析
 		var matchedData []map[string]interface{}
-		if err := json.NewDecoder(resp.Body).Decode(&matchedData); err != nil {
-			continue
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if line == "" {
+				continue
+			}
+			var record map[string]interface{}
+			if err := json.Unmarshal([]byte(line), &record); err != nil {
+				continue
+			}
+			matchedData = append(matchedData, record)
 		}
 
 		result := ForensicRuleResult{

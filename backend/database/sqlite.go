@@ -47,6 +47,7 @@ func InitDB() *gorm.DB {
 	createAdminIfNotExist(db)
 	createDefaultIngest(db)
 	creatrDefaultInvestigationTemplates(db)
+	createDefaultRules(db)
 	return db
 }
 
@@ -174,4 +175,97 @@ func creatrDefaultInvestigationTemplates(db *gorm.DB) {
 	}
 
 	db.Create(&defaultTemplates)
+}
+
+func createDefaultRules(db *gorm.DB) {
+	var count int64
+	db.Model(&model.Rule{}).Count(&count)
+	if count > 0 {
+		return
+	}
+
+	log.Println("Creating default forensic and investigation rules...")
+
+	defaultRules := []model.Rule{
+		// Forensic rules (type = forensic)
+		{
+			Name:        "Suspicious PowerShell Execution",
+			Description: "Detect suspicious PowerShell commands often used in attacks",
+			Query:       `process.name:"powershell.exe" AND (process.cmd_line contains "-enc" OR process.cmd_line contains "DownloadString" OR process.cmd_line contains "Invoke-Expression")`,
+			Type:        "forensic",
+			Severity:    "high",
+			Enabled:     true,
+			Version:     1,
+		},
+		{
+			Name:        "Malicious DNS Queries",
+			Description: "Detect DNS queries to known malicious domains",
+			Query:       `dns.query_name contains ".xyz" OR dns.query_name contains ".top" OR dns.query_name contains ".club"`,
+			Type:        "forensic",
+			Severity:    "medium",
+			Enabled:     true,
+			Version:     1,
+		},
+		{
+			Name:        "Failed Login Attempts",
+			Description: "Detect multiple failed login attempts indicating brute force",
+			Query:       `activity_name:"Logon Failed"`,
+			Type:        "forensic",
+			Severity:    "medium",
+			Enabled:     true,
+			Version:     1,
+		},
+		{
+			Name:        "Privilege Escalation Detection",
+			Description: "Detect potential privilege escalation via new service creation",
+			Query:       `activity_name:"Service Created" AND (process.name contains "sc.exe" OR process.name contains "New-Service")`,
+			Type:        "forensic",
+			Severity:    "high",
+			Enabled:     true,
+			Version:     1,
+		},
+		{
+			Name:        "WebLogic Detection",
+			Description: "Detect WebLogic traffic on port 7001",
+			Query:       `protocol:"HTTP" | dst_port:"7001" or src_port:"7001"`,
+			Type:        "forensic",
+			Severity:    "medium",
+			Enabled:     true,
+			Version:     1,
+		},
+		// Investigation rules (type = investigation)
+		{
+			Name:        "Host Timeline Investigation",
+			Description: "Query all events for a specific host within time range",
+			Query:       `observer.hostname:"${hostname}" AND _time:[${start_time}, ${end_time}]`,
+			Type:        "investigation",
+			Severity:    "low",
+			Enabled:     true,
+			Version:     1,
+		},
+		{
+			Name:        "User Activity Investigation",
+			Description: "Query all activities for a specific user",
+			Query:       `(target_user.name:"${username}" OR actor.user.name:"${username}") AND _time:[${start_time}, ${end_time}]`,
+			Type:        "investigation",
+			Severity:    "low",
+			Enabled:     true,
+			Version:     1,
+		},
+		{
+			Name:        "IP Reputation Check",
+			Description: "Check all events associated with a specific IP",
+			Query:       `(src_endpoint.ip:"${ip}" OR dst_endpoint.ip:"${ip}") AND _time:[${start_time}, ${end_time}]`,
+			Type:        "investigation",
+			Severity:    "low",
+			Enabled:     true,
+			Version:     1,
+		},
+	}
+
+	if err := db.Create(&defaultRules).Error; err != nil {
+		log.Printf("Failed to create default rules: %v", err)
+	} else {
+		log.Printf("Created %d default rules", len(defaultRules))
+	}
 }
