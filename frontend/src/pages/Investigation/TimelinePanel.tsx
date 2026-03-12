@@ -1,17 +1,134 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Clock, ExternalLink } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Search, Clock, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
 import type { MergedEvent } from "./types";
 
 interface TimelinePanelProps {
   mergedEvents: MergedEvent[];
-  onOpenInLogs?: (event: MergedEvent) => void;  // 可选的跳转函数
+  onOpenInLogs?: (event: MergedEvent) => void;
+}
+
+interface TimelineItemProps {
+  event: MergedEvent;
+  onOpenInLogs?: (event: MergedEvent) => void;
+}
+
+function TimelineItem({ event, onOpenInLogs }: TimelineItemProps) {
+  const [expanded, setExpanded] = useState(false);
+  
+  const eventAction = event.activity_name || event.action || event.event_type;
+  const severity = event.severity || "info";
+  
+  let actionColor = "text-muted-foreground";
+  if (severity.toLowerCase() === "high" || severity.toLowerCase() === "critical") actionColor = "text-red-500 font-semibold";
+  else if (severity.toLowerCase() === "medium") actionColor = "text-amber-500 font-semibold";
+
+  // 摘要：只显示关键字段
+  const summary = [
+    event.src_ip && `src: ${event.src_ip}`,
+    event.dst_ip && `dst: ${event.dst_ip}`,
+    event.hostname && `host: ${event.hostname}`,
+    event.username && `user: ${event.username}`,
+    event.process_name && `process: ${event.process_name}`,
+  ].filter(Boolean).join(" | ");
+
+  const rawContent = event.raw_data || JSON.stringify(event, null, 2);
+  const isLongContent = rawContent.length > 200;
+
+  return (
+    <div className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+      {/* 头部：时间 + 规则源 + 操作按钮 */}
+      <div className="flex items-start gap-3 p-3">
+        {/* 折叠按钮 */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0 flex-shrink-0 mt-1"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
+        </Button>
+
+        {/* 时间 */}
+        <div className="w-[140px] flex-shrink-0 font-mono text-xs text-muted-foreground">
+          {new Date(event._time).toLocaleString("en-GB", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
+          })}
+        </div>
+
+        {/* 规则源 */}
+        <Badge
+          variant="outline"
+          className="bg-background border-primary/20 text-primary text-[10px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] flex-shrink-0"
+          title={event._source_template}
+        >
+          {event._source_template}
+        </Badge>
+
+        {/* 操作：事件类型 + 摘要 */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            {eventAction && (
+              <span className={actionColor}>[{eventAction}]</span>
+            )}
+          </div>
+          {!expanded && summary && (
+            <div className="text-xs text-muted-foreground truncate mt-0.5">
+              {summary}
+            </div>
+          )}
+        </div>
+
+        {/* 跳转按钮 */}
+        {onOpenInLogs && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-[10px] flex-shrink-0"
+            onClick={() => onOpenInLogs(event)}
+          >
+            <ExternalLink className="w-3 h-3 mr-1" />
+            Query
+          </Button>
+        )}
+      </div>
+
+      {/* 展开内容 */}
+      {expanded && (
+        <div className="pl-12 pr-3 pb-3">
+          {summary && (
+            <div className="text-xs text-muted-foreground mb-2 bg-muted/30 p-2 rounded">
+              {summary}
+            </div>
+          )}
+          <pre className="text-[11px] font-mono text-muted-foreground bg-muted p-3 rounded overflow-x-auto max-h-60">
+            {rawContent}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function TimelinePanel({ mergedEvents, onOpenInLogs }: TimelinePanelProps) {
+  // 按时间排序
+  const sortedEvents = [...mergedEvents].sort(
+    (a, b) => new Date(b._time).getTime() - new Date(a._time).getTime()
+  );
+
   return (
     <Card className="flex-1 shadow-sm flex flex-col overflow-hidden border-t-4 border-t-primary/20">
       <CardHeader className="pb-2 bg-muted/10 border-b flex-none py-3">
@@ -22,86 +139,33 @@ export function TimelinePanel({ mergedEvents, onOpenInLogs }: TimelinePanelProps
           </CardTitle>
           {mergedEvents.length > 0 && (
             <Badge variant="outline" className="text-[10px] font-mono">
-              Total Events: {mergedEvents.length}
+              Total: {mergedEvents.length}
             </Badge>
           )}
         </div>
       </CardHeader>
       <CardContent className="flex-1 p-0 overflow-hidden relative">
-        <ScrollArea className="h-full w-full">
-          {mergedEvents.length > 0 ? (
-            <Table>
-              <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10 border-b shadow-sm">
-                <TableRow>
-                  <TableHead className="w-[180px] font-semibold">Timestamp</TableHead>
-                  <TableHead className="w-[160px] font-semibold">Directive Source</TableHead>
-                  <TableHead className="font-semibold">Event Details</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mergedEvents.map((ev, idx) => {
-                  const eventAction = ev.activity_name || ev.action || ev.event_type;
-                  const severity = ev.severity || "info";
-                  
-                  let actionColor = "text-muted-foreground";
-                  if (severity.toLowerCase() === "high" || severity.toLowerCase() === "critical") actionColor = "text-red-500 font-semibold";
-                  else if (severity.toLowerCase() === "medium") actionColor = "text-amber-500 font-semibold";
-
-                  return (
-                    <TableRow key={idx} className="hover:bg-muted/30 transition-colors group">
-                      <TableCell className="font-mono text-xs whitespace-nowrap text-muted-foreground align-top pt-3">
-                        {new Date(ev._time).toLocaleString('en-GB', { 
-                          year: 'numeric', month: '2-digit', day: '2-digit', 
-                          hour: '2-digit', minute: '2-digit', second: '2-digit',
-                          hour12: false
-                        })}
-                      </TableCell>
-                      <TableCell className="align-top pt-3">
-                        <Badge variant="outline" className="bg-background border-primary/20 text-primary text-[10px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[140px]" title={ev._source_template}>
-                          {ev._source_template}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs max-w-xl align-top pt-3 pb-3">
-                        <div className="flex flex-col gap-1">
-                          {eventAction && (
-                            <span className={actionColor}>[{eventAction}]</span>
-                          )}
-                          <span className="font-mono text-[11px] text-muted-foreground break-all whitespace-pre-wrap leading-relaxed">
-                            {ev.raw_data || JSON.stringify(ev, null, 2)}
-                          </span>
-                          {/* 跳转按钮 */}
-                          {onOpenInLogs && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-6 px-2 text-[10px] mt-1 w-fit"
-                              onClick={() => onOpenInLogs(ev)}
-                            >
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              Query Similar
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/60 space-y-4">
-              <div className="p-4 rounded-full bg-muted/10 ring-1 ring-border/50">
-                <Search className="w-8 h-8 opacity-50" />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-medium text-muted-foreground">Canvas is empty</p>
-                <p className="text-xs mt-1 max-w-[250px] mx-auto">
-                  Select directives above and click execute to build the timeline correlation.
-                </p>
-              </div>
+        {mergedEvents.length > 0 ? (
+          <ScrollArea className="h-full w-full">
+            <div className="divide-y divide-border/50">
+              {sortedEvents.map((ev, idx) => (
+                <TimelineItem key={idx} event={ev} onOpenInLogs={onOpenInLogs} />
+              ))}
             </div>
-          )}
-        </ScrollArea>
+          </ScrollArea>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/60 space-y-4">
+            <div className="p-4 rounded-full bg-muted/10 ring-1 ring-border/50">
+              <Search className="w-8 h-8 opacity-50" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-muted-foreground">Canvas is empty</p>
+              <p className="text-xs mt-1 max-w-[250px] mx-auto">
+                Select directives above and click execute to build the timeline correlation.
+              </p>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

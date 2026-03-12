@@ -199,9 +199,8 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
       newVars['start_time'] = start.split('.')[0] + 'Z';
       newVars['end_time'] = end.split('.')[0] + 'Z';
     }
->>>>>>> 0c8bd8a9 (feat: add configurable time range, failure isolation, time format fix)
 
-    // 覆盖Update左侧Panel
+    // 覆盖更新左侧面板
     setContextVars(newVars); 
   };
 
