@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Clock, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
+import { Search, Clock, ExternalLink, ChevronDown, ChevronRight, X } from "lucide-react";
 import type { MergedEvent } from "./types";
 
 interface TimelinePanelProps {
@@ -153,6 +154,8 @@ function TimelineItem({ event, onOpenInLogs }: TimelineItemProps) {
 }
 
 export function TimelinePanel({ mergedEvents, onOpenInLogs }: TimelinePanelProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  
   // 解析时间戳的辅助函数
   const parseEventTime = (ev: MergedEvent): number => {
     const timeFields = ['_time', 'time', 'timestamp', 'event_time', '@timestamp', 'datetime', 'ts'];
@@ -171,23 +174,57 @@ export function TimelinePanel({ mergedEvents, onOpenInLogs }: TimelinePanelProps
     return 0;
   };
 
+  // 过滤事件
+  const filteredEvents = useMemo(() => {
+    if (!searchQuery.trim()) return mergedEvents;
+    const query = searchQuery.toLowerCase();
+    return mergedEvents.filter(ev => {
+      // 搜索所有字段的值
+      const values = Object.values(ev).map(v => String(v).toLowerCase());
+      return values.some(v => v.includes(query));
+    });
+  }, [mergedEvents, searchQuery]);
+
   // 按时间排序
-  const sortedEvents = [...mergedEvents].sort((a, b) => {
+  const sortedEvents = [...filteredEvents].sort((a, b) => {
     return parseEventTime(b) - parseEventTime(a);
   });
 
   return (
     <Card className="flex-1 shadow-sm flex flex-col overflow-hidden border-t-4 border-t-primary/20">
       <CardHeader className="pb-2 bg-muted/10 border-b flex-none py-3">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Clock className="w-4 h-4 text-muted-foreground" />
             Unified Event Timeline
           </CardTitle>
+          
+          {/* 搜索框 */}
           {mergedEvents.length > 0 && (
-            <Badge variant="outline" className="text-[10px] font-mono">
-              Total: {mergedEvents.length}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search events..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-7 text-xs pl-7 w-40"
+                />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 absolute right-0.5 top-1/2 -translate-y-1/2"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
+              <Badge variant="outline" className="text-[10px] font-mono">
+                {searchQuery ? `${sortedEvents.length} / ${mergedEvents.length}` : `Total: ${mergedEvents.length}`}
+              </Badge>
+            </div>
           )}
         </div>
       </CardHeader>
