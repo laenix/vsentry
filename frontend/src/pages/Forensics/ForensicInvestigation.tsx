@@ -178,7 +178,7 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
           <div className="flex items-center gap-4 text-sm">
             <Badge variant="outline">{fileInfo.file_type}</Badge>
             <span className="text-muted-foreground">
-              {fileInfo.event_count} 事件
+              {fileInfo.event_count} events
             </span>
           </div>
         )}
@@ -288,8 +288,12 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(result._time).toLocaleString('en-US')}
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {new Date(result._time).toLocaleString('en-GB', { 
+                              year: 'numeric', month: '2-digit', day: '2-digit', 
+                              hour: '2-digit', minute: '2-digit', second: '2-digit',
+                              hour12: false
+                            })}
                           </span>
                         </div>
                       </div>
@@ -306,7 +310,7 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
                         onClick={() => handleViewInLogs(result)}
                       >
                         <ExternalLink className="w-3 h-3 mr-1" />
-                        查看日志
+                        View in Logs
                       </Button>
                     </div>
                   ))}

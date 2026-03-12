@@ -48,9 +48,10 @@ export function TimelinePanel({ mergedEvents }: TimelinePanelProps) {
                   return (
                     <TableRow key={idx} className="hover:bg-muted/30 transition-colors group">
                       <TableCell className="font-mono text-xs whitespace-nowrap text-muted-foreground align-top pt-3">
-                        {new Date(ev._time).toLocaleString(undefined, { 
-                          month: 'short', day: '2-digit', 
-                          hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        {new Date(ev._time).toLocaleString('en-GB', { 
+                          year: 'numeric', month: '2-digit', day: '2-digit', 
+                          hour: '2-digit', minute: '2-digit', second: '2-digit',
+                          hour12: false
                         })}
                       </TableCell>
                       <TableCell className="align-top pt-3">

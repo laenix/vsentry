@@ -38,6 +38,9 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
   const [newVarKey, setNewVarKey] = useState("");
   const [newVarValue, setNewVarValue] = useState("");
 
+  // 时间范围配置 (单位: 小时, 0 表示不限时间)
+  const [timeRangeHours, setTimeRangeHours] = useState<number>(2);
+
   const [loading, setLoading] = useState(false);
   const [mergedEvents, setMergedEvents] = useState<MergedEvent[]>([]);
 
@@ -180,13 +183,20 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
        }
     }
 
-    // 3. 以 baseTime 为Medium心，往ago推 2 hours，往后推 2 hours
-    const start = new Date(baseTime.getTime() - 2 * 3600 * 1000).toISOString();
-    const end = new Date(baseTime.getTime() + 2 * 3600 * 1000).toISOString();
-    
-    // VictoriaLogs 喜欢 2026-03-03T00:40:00Z 这种格式 (去掉毫seconds)
-    newVars['start_time'] = start.split('.')[0] + 'Z';
-    newVars['end_time'] = end.split('.')[0] + 'Z';
+
+    // 3. 以 baseTime 为中心，根据配置的时间范围计算起止时间
+    if (timeRangeHours === 0) {
+      // 不限时间
+      newVars['start_time'] = '';
+      newVars['end_time'] = '';
+    } else {
+      const start = new Date(baseTime.getTime() - timeRangeHours * 3600 * 1000).toISOString();
+      const end = new Date(baseTime.getTime() + timeRangeHours * 3600 * 1000).toISOString();
+      // VictoriaLogs 喜欢 2026-03-03T00:40:00Z 这种格式 (去掉毫秒)
+      newVars['start_time'] = start.split('.')[0] + 'Z';
+      newVars['end_time'] = end.split('.')[0] + 'Z';
+    }
+>>>>>>> 0c8bd8a9 (feat: add configurable time range, failure isolation, time format fix)
 
     // 覆盖Update左侧Panel
     setContextVars(newVars); 
@@ -237,18 +247,33 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
           if (res.data.context_used) {
             updatedContext = { ...updatedContext, ...res.data.context_used };
           }
-          // 使用后端Return的 rule_name
-          return (res.data.events || []).map((ev: any) => ({
-            ...ev,
-            _time: ev._time || ev.time || ev.timestamp || new Date().toISOString(),
-            _source_template: res.data.rule_name || template?.name || "Unknown Rule",
-          }));
+          // 使用后端返回的 rule_name
+          return {
+            success: true,
+            events: (res.data.events || []).map((ev: any) => ({
+              ...ev,
+              _time: ev._time || ev.time || ev.timestamp || new Date().toISOString(),
+              _source_template: res.data.rule_name || template?.name || "Unknown Rule",
+            }))
+          };
         }
-        return [];
+        return { success: false, events: [], error: res.msg || 'Unknown error', templateName: template?.name };
       });
 
-      const resultsArray = await Promise.all(promises);
-      resultsArray.forEach(events => { allEvents = [...allEvents, ...events]; });
+      const resultsArray = await Promise.allSettled(promises);
+      
+      // 处理结果，隔离失败
+      resultsArray.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value.success) {
+          allEvents = [...allEvents, ...result.value.events];
+        } else if (result.status === 'fulfilled' && !result.value.success) {
+          // 单个规则执行失败，不影响整体
+          console.warn(`Rule "${result.value.templateName}" failed:`, result.value.error);
+          toast.warning(`Rule "${result.value.templateName}" failed: ${result.value.error}`);
+        } else if (result.status === 'rejected') {
+          console.warn('Rule execution rejected:', result.reason);
+        }
+      });
       
       // 全局TimeSort
       allEvents.sort((a, b) => new Date(b._time).getTime() - new Date(a._time).getTime());
@@ -305,6 +330,12 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
           setNewVarValue={setNewVarValue}
           handleAddVar={handleAddVar}
           handleRemoveVar={handleRemoveVar}
+          timeRangeHours={timeRangeHours}
+          onTimeRangeChange={setTimeRangeHours}
+          onApplyTimeRange={() => {
+            if (incidentData) applyAlertContext(incidentData, parseInt(selectedAlertIdx));
+            else if (forensicsData) loadForensicsContext(forensicsCaseId!, forensicsFileId);
+          }}
           forensicsCaseId={forensicsCaseId}
           forensicsFileId={forensicsFileId}
           forensicsFileName={forensicsData?.files?.find((f: any) => f.id === forensicsFileId)?.original_name}
