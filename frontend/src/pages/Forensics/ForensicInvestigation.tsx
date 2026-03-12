@@ -49,7 +49,7 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
           _time: result._time,
           _source_template: result.rule_name,
           severity: result.severity,
-          activity_name: data.activity_name || data.action || 'Match',
+          // 不设置 activity_name，让 TimelinePanel 不显示 [Match]
         });
       });
     });
