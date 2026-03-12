@@ -19,10 +19,23 @@ interface TimelineItemProps {
 function TimelineItem({ event, onOpenInLogs }: TimelineItemProps) {
   const [expanded, setExpanded] = useState(false);
   
-  // 安全解析时间
-  const eventTime = event._time || event.time || event.timestamp || new Date().toISOString();
+  // 安全解析时间 - 尝试多个可能的字段
+  const timeFields = ['_time', 'time', 'timestamp', 'event_time', '@timestamp', 'datetime', 'ts'];
+  let eventTime = '';
+  for (const field of timeFields) {
+    if (event[field]) {
+      eventTime = String(event[field]);
+      break;
+    }
+  }
+  // 如果都没找到，用当前时间
+  if (!eventTime) {
+    eventTime = new Date().toISOString();
+  }
   const timeObj = new Date(eventTime);
   const isValidTime = !isNaN(timeObj.getTime());
+  
+  // Debug: 可以通过 console.log(event) 查看实际数据结构
   
   const eventAction = event.activity_name || event.action || event.event_type;
   const severity = event.severity || "info";
