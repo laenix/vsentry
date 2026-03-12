@@ -14,7 +14,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		tokenString := ctx.GetHeader("Authorization")
 		if tokenString == "" || !strings.HasPrefix(tokenString, "Bearer") {
 			ctx.JSON(http.StatusUnauthorized, gin.H{
-				"code": 401, "msg": "TokenValidateFailed",
+				"code": 401, "msg": "Token验证失败",
 			})
 			ctx.Abort()
 			return
@@ -23,7 +23,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		token, Claims, err := ParseToken(tokenString)
 		if err != nil || !token.Valid {
 			ctx.JSON(http.StatusUnauthorized, gin.H{
-				"code": 401, "msg": "Token失效，请重NewLogin", "data": err,
+				"code": 401, "msg": "Token失效，请重新登录", "data": err,
 			})
 			ctx.Abort()
 			return
@@ -34,7 +34,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		DB.Table("users").Where("id = ?", userId).Scan(&user)
 		if user.ID == 0 {
 			ctx.JSON(http.StatusUnauthorized, gin.H{
-				"code": 401, "msg": "User不存在",
+				"code": 401, "msg": "用户不存在",
 			})
 			ctx.Abort()
 			return

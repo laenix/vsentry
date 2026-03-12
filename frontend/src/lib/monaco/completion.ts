@@ -1,16 +1,16 @@
 import * as monaco from 'monaco-editor';
 
-//   1. 定义 LogsQL 核心关键字
+// 1. 定义 LogsQL 核心关键字
 const LOGSQL_KEYWORDS = [
   '_time', '_stream', '_msg', 'AND', 'OR', 'NOT', 'IN', 'ANY', 'EXACT'
 ];
 
-//   2. 定义管道函数及常用Filter函数
+// 2. 定义管道Function及常用FilterFunction
 const PIPE_FUNCTIONS = [
   'stats', 'limit', 'sort', 'fields', 'filter', 'copy', 'delete', 'rename', 'extract'
 ];
 
-//   3. 统计聚合函数
+// 3. 统计聚合Function
 const AGGREGATE_FUNCTIONS = [
   'count', 'count_empty', 'sum', 'min', 'max', 'avg', 'median', 'p50', 'p90', 'p95', 'p99'
 ];
@@ -21,9 +21,10 @@ const AGGREGATE_FUNCTIONS = [
 export function registerLogsQL(monacoInstance: typeof monaco) {
   const languageId = 'logsql';
 
-  // 注册语言 - monacoInstance.languages.register({ id: languageId });
+  // Register语言 ID
+  monacoInstance.languages.register({ id: languageId });
 
-  //   Settings语法High亮 (Tokenization)
+  // Settings语法High亮 (Tokenization)
   monacoInstance.languages.setMonarchTokensProvider(languageId, {
     tokenizer: {
       root: [
@@ -37,14 +38,15 @@ export function registerLogsQL(monacoInstance: typeof monaco) {
         [/[{}()\[\]]/, 'delimiter'],
         [/".*?"/, 'string'],
         [/\d+/, 'number'],
-        [/\|/, 'operator'], //   管道符
+        [/\|/, 'operator'], // 管道符
       ]
     },
     LOGSQL_KEYWORDS,
     PIPE_FUNCTIONS
   });
 
-  // 注册自动补全提供者 - .languages.registerCompletionItemProvider(languageId, {
+  // Register自动补全提供者
+  monacoInstance.languages.registerCompletionItemProvider(languageId, {
     triggerCharacters: [' ', '|', ':', '"', '.'],
     provideCompletionItems: (model, position) => {
       const word = model.getWordUntilPosition(position);
@@ -56,14 +58,14 @@ export function registerLogsQL(monacoInstance: typeof monaco) {
       };
 
       const suggestions: monaco.languages.CompletionItem[] = [
-        //   关键字补全
+        // 关键字补全
         ...LOGSQL_KEYWORDS.map(k => ({
           label: k,
           kind: monacoInstance.languages.CompletionItemKind.Keyword,
           insertText: k,
           range
         })),
-        //   管道函数补全
+        // 管道Function补全
         ...PIPE_FUNCTIONS.map(f => ({
           label: f,
           kind: monacoInstance.languages.CompletionItemKind.Function,
@@ -71,7 +73,7 @@ export function registerLogsQL(monacoInstance: typeof monaco) {
           range,
           detail: 'LogsQL Pipe Function'
         })),
-        //   聚合函数补全
+        // 聚合Function补全
         ...AGGREGATE_FUNCTIONS.map(a => ({
           label: a,
           kind: monacoInstance.languages.CompletionItemKind.Snippet,
@@ -86,7 +88,7 @@ export function registerLogsQL(monacoInstance: typeof monaco) {
     }
   });
 
-  //   Settings语言Config (括号匹配等)
+  // Settings语言配置 (括号匹配等)
   monacoInstance.languages.setLanguageConfiguration(languageId, {
     surroundingPairs: [
       { open: '{', close: '}' },

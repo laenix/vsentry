@@ -8,7 +8,7 @@ import (
 	"github.com/expr-lang/expr"
 )
 
-// createExprEnv - expr ExecuteEnvironment，Resolve结构体字段访问Permission问题
+// createExprEnv 构造 expr ExecuteEnvironment，解决结构体字段访问Permission问题
 func createExprEnv(ctx *ExecutionContext) map[string]interface{} {
 	stepsMap := make(map[string]interface{})
 	for id, result := range ctx.Steps {
@@ -19,24 +19,28 @@ func createExprEnv(ctx *ExecutionContext) map[string]interface{} {
 		}
 	}
 
-	// 构造基础Environment映射 - := map[string]interface{}{
+	// 构造基础Environment映射
+	env := map[string]interface{}{
 		"incident": ctx.Global["incident"],
 		"steps":    stepsMap,
-		"env":      ctx.Global, // 包含手动触发注入的 - //   [核心修复] 注册常用工具函数
+		"env":      ctx.Global, // 包含手动触发注入的 context
+
+		// [核心修复] Register常用工具Function
 		"sprintf": fmt.Sprintf,
-		"len":     func(v interface{}) int { return 0 }, //   可根据Need补充
+		"len":     func(v interface{}) int { return 0 }, // 可根据Need补充
 		"to_table_markdown": func(data interface{}, columns ...string) string {
-			// 将InterfaceConvert为 - list, ok := data.([]interface{})
+			// 将InterfaceConvert为 slice
+			list, ok := data.([]interface{})
 			if !ok || len(list) == 0 {
 				return "No Data"
 			}
 
 			var sb strings.Builder
-			//   1. 构造表头
+			// 1. 构造表头
 			sb.WriteString("| " + strings.Join(columns, " | ") + " |\n")
 			sb.WriteString("| " + strings.Repeat(" --- |", len(columns)) + "\n")
 
-			//   2. 构造行
+			// 2. 构造行
 			for _, item := range list {
 				row, ok := item.(map[string]interface{})
 				if !ok {
@@ -54,24 +58,24 @@ func createExprEnv(ctx *ExecutionContext) map[string]interface{} {
 		},
 
 		"to_table_html": func(data interface{}, columns ...string) string {
-			//   1. TypeSecurity检查
+			// 1. TypeSecurity检查
 			list, ok := data.([]interface{})
 			if !ok || len(list) == 0 {
 				return "<p style='color: gray;'>No Data Available</p>"
 			}
 
 			var sb strings.Builder
-			//   2. 写入简单的内联样式 (邮件Client对外部 CSS 支持较差)
+			// 2. 写入简单的内联样式 (邮件Client对外部 CSS 支持较差)
 			sb.WriteString("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%; font-family: sans-serif; font-size: 14px;'>")
 
-			//   3. 构造表头
+			// 3. 构造表头
 			sb.WriteString("<tr style='background-color: #f2f2f2; text-align: left;'>")
 			for _, col := range columns {
 				sb.WriteString(fmt.Sprintf("<th style='padding: 8px; border: 1px solid #ddd;'>%s</th>", col))
 			}
 			sb.WriteString("</tr>")
 
-			//   4. 构造行Data
+			// 4. 构造行Data
 			for _, item := range list {
 				row, ok := item.(map[string]interface{})
 				if !ok {
@@ -80,7 +84,8 @@ func createExprEnv(ctx *ExecutionContext) map[string]interface{} {
 				sb.WriteString("<tr>")
 				for _, col := range columns {
 					val := row[col]
-					// Handle空值或Format - := fmt.Sprintf("%v", val)
+					// Handle空值或Format
+					valStr := fmt.Sprintf("%v", val)
 					if val == nil {
 						valStr = "-"
 					}
@@ -96,10 +101,12 @@ func createExprEnv(ctx *ExecutionContext) map[string]interface{} {
 	return env
 }
 
-// ResolveVariables - Config Medium的 {{...}} Variable
+// ResolveVariables 递归Parse Config Medium的 {{...}} Variable
 func ResolveVariables(config map[string]interface{}, ctx *ExecutionContext) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
-	env := createExprEnv(ctx) // 统一调用Environment构造 - k, v := range config {
+	env := createExprEnv(ctx) // 统一调用Environment构造
+
+	for k, v := range config {
 		strVal, ok := v.(string)
 		if !ok {
 			result[k] = v

@@ -16,19 +16,21 @@ import (
 	"github.com/spf13/viper"
 )
 
-// ExecuteRule - func ExecuteRule(rule model.Rule) {
+// ExecuteRule ExecuteRuleQuery
+func ExecuteRule(rule model.Rule) {
 	vLogsAddr := viper.GetString("victorialogs.url")
 	if vLogsAddr == "" {
-		vLogsAddr = "http://  127.0.0.1:9428"
+		vLogsAddr = "http://127.0.0.1:9428"
 	}
 
-	//   ✅ 核心修正：绝对信任User的Rule！不强加任何额外的Time窗口拼接
+	// ✅ 核心修正：绝对信任User的Rule！不强加任何额外的Time窗口拼接
 	finalQuery := strings.TrimSpace(rule.Query)
 	log.Printf("[Rule:%d] Executing: %s", rule.ID, finalQuery)
 
-	// Send给 - resp, err := http.PostForm(vLogsAddr+"/select/logsql/query", url.Values{
+	// Send给 VictoriaLogs
+	resp, err := http.PostForm(vLogsAddr+"/select/logsql/query", url.Values{
 		"query": {finalQuery},
-		"limit": {"1000"}, // 在 - API 层面Settings兜底 limit，不影响User的 LogSQL
+		"limit": {"1000"}, // 在 HTTP API 层面Settings兜底 limit，不影响User的 LogSQL
 	})
 	if err != nil {
 		log.Printf("[Rule:%d] Request failed: %v", rule.ID, err)
@@ -41,7 +43,7 @@ import (
 		return
 	}
 
-	//   ✅ 致命Error拦截：如果 LogSQL 写错了 (如拼写Error)，阻断Execute，防止污染Database
+	// ✅ 致命Error拦截：如果 LogSQL 写错了 (如拼写Error)，阻断Execute，防止污染Data库
 	if resp.StatusCode >= 400 {
 		log.Printf("[Rule:%d] Query Syntax Error: %s | Query: %s", rule.ID, string(body), finalQuery)
 		return
@@ -70,7 +72,7 @@ func saveAlert(rule model.Rule, evidence string) {
 		db.Create(&incident)
 	}
 
-	// Parse - ，针对每一条原始Log计算独立指纹
+	// Parse NDJSON，针对every一条原始Log计算独立指纹
 	lines := strings.Split(strings.TrimSpace(evidence), "\n")
 	newAlertsCount := 0
 
@@ -78,7 +80,8 @@ func saveAlert(rule model.Rule, evidence string) {
 		if line == "" {
 			continue
 		}
-		// 指纹计算基于RuleIDSum该单条Log内容 - := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%d-%s", rule.ID, line))))
+		// 指纹计算基于RuleID和该单条Log内容
+		fp := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%d-%s", rule.ID, line))))
 		
 		var count int64
 		db.Model(&model.Alert{}).Where("fingerprint = ?", fp).Count(&count)
@@ -95,7 +98,7 @@ func saveAlert(rule model.Rule, evidence string) {
 		}
 	}
 
-	//   仅当产生NewAlertEvidence时，才Update Incident Count并触发 SOAR Playbook
+	// 仅当产生NewAlertEvidence时，才Update Incident 计数并触发 SOAR Playbook
 	if newAlertsCount > 0 {
 		db.Model(&incident).Updates(map[string]interface{}{
 			"alert_count": incident.AlertCount + newAlertsCount,
@@ -105,17 +108,18 @@ func saveAlert(rule model.Rule, evidence string) {
 	}
 }
 
-// ExecuteRuleWithQuery - （用于回溯）
+// ExecuteRuleWithQuery 使用指定QueryExecuteRule（用于回溯）
 func ExecuteRuleWithQuery(rule model.Rule, query string) {
 	vLogsAddr := viper.GetString("victorialogs.url")
 	if vLogsAddr == "" {
-		vLogsAddr = "http://  127.0.0.1:9428"
+		vLogsAddr = "http://127.0.0.1:9428"
 	}
 
 	finalQuery := strings.TrimSpace(query)
 	log.Printf("[Rule:%d][Backtrace] Executing: %s", rule.ID, finalQuery)
 
-	// Send给 - resp, err := http.PostForm(vLogsAddr+"/select/logsql/query", url.Values{
+	// Send给 VictoriaLogs
+	resp, err := http.PostForm(vLogsAddr+"/select/logsql/query", url.Values{
 		"query": {finalQuery},
 		"limit": {"1000"},
 	})

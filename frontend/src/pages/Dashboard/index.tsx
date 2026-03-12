@@ -20,7 +20,7 @@ export default function DashboardPage() {
     };
     fetchStats();
     
-    //   可选：每30秒轮询一次
+    // 可选：every30seconds轮询一次
     const timer = setInterval(fetchStats, 30000);
     return () => clearInterval(timer);
   }, []);
@@ -64,7 +64,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600">Healthy</div>
-            {/* 这里Can展示 stats.vlogs_metrics 里的具体Data */}
+            {/* 这里可以展示 stats.vlogs_metrics 里的具体Data */}
             <p className="text-xs text-muted-foreground">VictoriaLogs Active</p>
           </CardContent>
         </Card>
@@ -72,7 +72,7 @@ export default function DashboardPage() {
 
       {/* Severity Breakdown */}
       <div className="grid gap-4 md:grid-cols-2">
-         {/* Can放一个 Chart 展示 stats.severity_counts */}
+         {/* 可以放一个 Chart 展示 stats.severity_counts */}
          <Card>
             <CardHeader>
                 <CardTitle>Severity Distribution</CardTitle>

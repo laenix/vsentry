@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { forensicsService } from "@/services/forensics";
 import { ruleService, type DetectionRule } from "@/services/rules";
 import { useTabStore } from "@/stores/tab-store";
@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Loader2, Play, FlaskConical, Clock, ArrowLeft, ExternalLink, Search, X, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
+import { Loader2, Play, FlaskConical, FileText, Clock, ArrowLeft, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 interface ForensicInvestigationProps {
@@ -22,7 +21,7 @@ interface ForensicInvestigationProps {
 interface ForensicResult {
   rule_id: number;
   rule_name: string;
-  rule_query: string; // Rule的实际Query语句 - : string;
+  severity: string;
   matched_data: Record<string, any>[];
   count: number;
   _time: string;
@@ -37,22 +36,34 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<ForensicResult[]>([]);
   const [executing, setExecuting] = useState(false);
-  
-  // SearchSum展开Status - [searchQuery, setSearchQuery] = useState("");
-  const [expandedResults, setExpandedResults] = useState<Set<number>>(new Set());
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
-  // LoadForensicsRule - (() => {
+  // 加载ForensicsRule
+  useEffect(() => {
     const fetchRules = async () => {
       try {
+        console.log("Fetching rules...");
         const res = await ruleService.list();
+        console.log("API Response received:", res);
+        
         if (res.code === 200) {
           let list: DetectionRule[] = [];
           if (Array.isArray(res.data)) list = res.data;
           else if (res.data?.rules) list = res.data.rules;
           
+          console.log("All rules:", JSON.stringify(list));
+          
+          // Debug: 显示所有Enable的Rule
+          const enabledRules = list.filter(r => r.enabled);
+          console.log("Enabled rules:", JSON.stringify(enabledRules));
+          
+          // 只显示ForensicsRule
           const forensicRules = list.filter(r => (r.type || "alert") === "forensic" && r.enabled);
-          setRules(forensicRules.length > 0 ? forensicRules : list.filter(r => r.enabled));
+          console.log("Forensic rules:", JSON.stringify(forensicRules));
+          
+          // 如果没有ForensicsRule，显示所有Rule以便Debug
+          setRules(forensicRules.length > 0 ? forensicRules : enabledRules);
+        } else {
+          console.error("API error:", res.msg);
         }
       } catch (e) {
         console.error("Fetch error:", e);
@@ -61,7 +72,8 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
     fetchRules();
   }, []);
 
-  // LoadFileInfo - (() => {
+  // 加载FileInfo
+  useEffect(() => {
     const fetchFileInfo = async () => {
       if (!tabData?.case_id) return;
       try {
@@ -113,7 +125,7 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
         setResults(ruleResults);
         toast.success(`Analysis complete. Found ${ruleResults.length} results`);
       } else {
-        throw new Error(res.msg || "ExecuteFailed");
+        throw new Error(res.msg || "执行失败");
       }
     } catch (e: any) {
       toast.error("Analysis failed", { description: e.message });
@@ -123,72 +135,16 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
   };
 
   const handleGoBack = () => {
+    // ReturnForensicsCasePage
     if (tabData?.case_id) {
       addTab('forensics', 'Forensics', {});
     }
   };
 
   const handleViewInLogs = (result: ForensicResult) => {
-    //   使用 | 分隔QueryCondition，rule_query 是实际的Query语句
-    let query = `env:forensics`;
-    query += ` | task_id:${tabData?.case_id}`;
-    query += ` | forensic_file_id:${tabData?.file_id}`;
-    // AddRule的Query语句 - (result.rule_query) {
-      query += ` | ${result.rule_query}`;
-    }
+    // 跳转到LogQueryPage
+    const query = `env:forensics case_id:${tabData?.case_id} file_id:${tabData?.file_id}`;
     addTab('logs', `Logs: ${tabData?.file_name}`, { query });
-  };
-
-  // Filter结果 - filteredResults = useMemo(() => {
-    if (!searchQuery.trim()) return results;
-    const query = searchQuery.toLowerCase();
-    return results.filter(r => 
-      r.rule_name.toLowerCase().includes(query) ||
-      r.severity.toLowerCase().includes(query) ||
-      JSON.stringify(r.matched_data).toLowerCase().includes(query)
-    );
-  }, [results, searchQuery]);
-
-  // 切换展开 - toggleExpand = (idx: number) => {
-    setExpandedResults(prev => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
-      return next;
-    });
-  };
-
-  // 复制 - copyResult = (result: ForensicResult, idx: number) => {
-    const jsonStr = JSON.stringify(result.matched_data, null, 2);
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(jsonStr).then(() => {
-        setCopiedIndex(idx);
-        toast.success("Copied to clipboard");
-        setTimeout(() => setCopiedIndex(null), 2000);
-      });
-    } else {
-      const textarea = document.createElement('textarea');
-      textarea.value = jsonStr;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      setCopiedIndex(idx);
-      toast.success("Copied to clipboard");
-      setTimeout(() => setCopiedIndex(null), 2000);
-    }
-  };
-
-  //   FormatTime - 数字格式，带年份
-  const formatTime = (timeStr: string) => {
-    if (!timeStr) return "Unknown";
-    const date = new Date(timeStr);
-    if (isNaN(date.getTime())) return timeStr;
-    return date.toLocaleString('en-CA', { 
-      year: 'numeric', month: '2-digit', day: '2-digit', 
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false
-    });
   };
 
   if (!tabData) {
@@ -222,7 +178,7 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
           <div className="flex items-center gap-4 text-sm">
             <Badge variant="outline">{fileInfo.file_type}</Badge>
             <span className="text-muted-foreground">
-              {fileInfo.event_count} Event
+              {fileInfo.event_count} 事件
             </span>
           </div>
         )}
@@ -300,144 +256,60 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
         </div>
 
         {/* Right: Analysis Results Timeline */}
-        <Card className="flex-1 flex flex-col border-t-4 border-t-purple-500">
-          <CardHeader className="py-3 border-b bg-muted/10">
-            <div className="flex justify-between items-center gap-4">
-              <CardTitle className="text-sm">Analysis Results</CardTitle>
-              
-              {/* Search框 */}
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search results..." 
-                    className="h-7 text-xs pl-7 w-[180px]"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  {searchQuery && (
-                    <button 
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setSearchQuery("")}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-                {results.length > 0 && (
-                  <Badge variant="outline" className="text-[10px]">
-                    {searchQuery ? `${filteredResults.length} / ${results.length}` : results.length}
-                  </Badge>
-                )}
-              </div>
-            </div>
+        <Card className="flex-1 flex flex-col">
+          <CardHeader className="py-3 border-b">
+            <CardTitle className="text-sm">Analysis Results</CardTitle>
+            <CardDescription className="text-xs">Forensic rule detection results</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-hidden">
             <ScrollArea className="h-full">
-              {filteredResults.length === 0 ? (
+              {results.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
                   <FlaskConical className="w-10 h-10 opacity-20" />
-                  <p className="text-sm">
-                    {searchQuery ? "No matching results" : "Select rules and run analysis"}
-                  </p>
+                  <p className="text-sm">Select rules and run analysis</p>
                 </div>
               ) : (
-                <div className="py-4 px-6">
-                  {/* Time线 */}
-                  <div className="relative">
-                    {/* 垂直线 */}
-                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-purple-500/30 via-purple-500/10 to-transparent" />
-                    
-                    {filteredResults.map((result, idx) => {
-                      const isExpanded = expandedResults.has(idx);
-                      let severityColor = "bg-blue-500";
-                      if (result.severity?.toLowerCase() === "critical" || result.severity?.toLowerCase() === "high") {
-                        severityColor = "bg-red-500";
-                      } else if (result.severity?.toLowerCase() === "medium") {
-                        severityColor = "bg-amber-500";
-                      } else if (result.severity?.toLowerCase() === "low") {
-                        severityColor = "bg-green-500";
-                      }
-
-                      return (
-                        <div key={idx} className="relative flex gap-4 pb-6 last:pb-0 group">
-                          {/* Time点圆圈 */}
-                          <div className={`relative z-10 w-2 h-2 rounded-full mt-2 shrink-0 ${severityColor} ring-4 ring-background group-hover:scale-125 transition-transform`} />
-                          
-                          {/* 结果卡片 */}
-                          <div className="flex-1 min-w-0">
-                            {/* 头部 */}
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
-                                {formatTime(result._time)}
-                              </span>
-                              <Badge variant="outline" className={`${
-                                result.severity === 'critical' ? 'border-red-500 text-red-500' :
-                                result.severity === 'high' ? 'border-orange-500 text-orange-500' :
-                                result.severity === 'medium' ? 'border-amber-500 text-amber-500' :
-                                'border-blue-500 text-blue-500'
-                              }`}>
-                                {result.severity}
-                              </Badge>
-                              <span className="font-medium text-sm">{result.rule_name}</span>
-                              <Badge variant="secondary" className="text-[10px]">
-                                {result.count} matches
-                              </Badge>
-                            </div>
-
-                            {/* 内容 */}
-                            <div className="bg-card border rounded-md overflow-hidden shadow-sm hover:border-purple-500/20 transition-colors">
-                              <div 
-                                className="p-2 px-3 flex items-center justify-between cursor-pointer bg-muted/20 hover:bg-muted/30"
-                                onClick={() => toggleExpand(idx)}
-                              >
-                                <div className="flex items-center gap-2 overflow-hidden">
-                                  {isExpanded ? (
-                                    <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
-                                  ) : (
-                                    <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                                  )}
-                                  <span className="text-xs text-muted-foreground truncate">
-                                    {result.matched_data?.length > 0 
-                                      ? JSON.stringify(result.matched_data[0]).substring(0, 80) + "..." 
-                                      : "No matched data"}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 px-2 text-[10px]"
-                                    onClick={(e) => { e.stopPropagation(); copyResult(result, idx); }}
-                                  >
-                                    {copiedIndex === idx ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 px-2 text-[10px] text-blue-600 hover:text-blue-700"
-                                    onClick={(e) => { e.stopPropagation(); handleViewInLogs(result); }}
-                                  >
-                                    <ExternalLink className="w-3 h-3 mr-1" />
-                                    Logs
-                                  </Button>
-                                </div>
-                              </div>
-
-                              {/* 展开的Detail */}
-                              {isExpanded && (
-                                <div className="border-t bg-muted/5 p-3">
-                                  <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-all max-h-64 overflow-auto">
-                                    {JSON.stringify(result.matched_data, null, 2)}
-                                  </pre>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                <div className="p-4 space-y-3">
+                  {results.map((result, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-lg border bg-card hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={
+                            result.severity === 'critical' ? 'border-red-500 text-red-500' :
+                            result.severity === 'high' ? 'border-orange-500 text-orange-500' :
+                            'border-blue-500 text-blue-500'
+                          }>
+                            {result.severity}
+                          </Badge>
+                          <span className="font-medium">{result.rule_name}</span>
                         </div>
-                      );
-                    })}
-                  </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(result._time).toLocaleString('en-US')}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground mb-3">
+                        <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+                          {JSON.stringify(result.matched_data, null, 2)}
+                        </pre>
+                      </div>
+
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleViewInLogs(result)}
+                      >
+                        <ExternalLink className="w-3 h-3 mr-1" />
+                        查看日志
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               )}
             </ScrollArea>

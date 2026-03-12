@@ -10,12 +10,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-// LogPayload - type LogPayload struct {
+// LogPayload 包装LogData及其元Data
+type LogPayload struct {
 	Config database.IngestCache
 	Data   interface{}
 }
 
-// LogQueue - var LogQueue = make(chan LogPayload, 10000)
+// LogQueue 全局Log队列
+var LogQueue = make(chan LogPayload, 10000)
 
 type workerEntry struct {
 	instance *Ingest
@@ -27,7 +29,8 @@ var (
 	workerMu      sync.RWMutex
 )
 
-// StartDispatcher - func StartDispatcher() {
+// StartDispatcher Start后台Schedule器
+func StartDispatcher() {
 	log.Println("Log Dispatcher started")
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
@@ -42,21 +45,23 @@ var (
 	}
 }
 
-// processPayload - func processPayload(payload LogPayload) {
+// processPayload 现已变为纯内存非阻塞操作
+func processPayload(payload LogPayload) {
 	id := payload.Config.ID
 	vLogsAddr := viper.GetString("victorialogs.url")
 	if vLogsAddr == "" {
-		vLogsAddr = "http://  victorialogs:9428"
+		vLogsAddr = "http://victorialogs:9428"
 	}
 	localEndpoint := vLogsAddr + "/insert/jsonline"
 
-	// 提取出纯净的Config字段进行比对 - := strings.TrimPrefix(payload.Config.StreamFields, "_stream_fields=")
+	// 提取出纯净的配置字段进行比对
+	cleanFields := strings.TrimPrefix(payload.Config.StreamFields, "_stream_fields=")
 
 	workerMu.RLock()
 	w, ok := activeWorkers[id]
 	workerMu.RUnlock()
 
-	//   1. 【核心修复】：如果Config的 StreamFields 发生实质变更，才Stop旧Instance
+	// 1. 【核心修复】：如果配置的 StreamFields 发生实质变更，才Stop旧实例
 	if ok && w.instance.streamFields != cleanFields {
 		workerMu.Lock()
 		if w, ok = activeWorkers[id]; ok && w.instance.streamFields != cleanFields {
@@ -68,7 +73,7 @@ var (
 		workerMu.Unlock()
 	}
 
-	//   2. 如果Instance不存在，则CreateNewInstance
+	// 2. 如果实例Not found，则CreateNew实例
 	if !ok {
 		workerMu.Lock()
 		if w, ok = activeWorkers[id]; !ok {
@@ -81,12 +86,12 @@ var (
 		workerMu.Unlock()
 	}
 
-	//   3. 投递Log到Instance私有通道 (完全非Block)
+	// 3. 投递Log到实例私有通道 (完全非阻塞)
 	w.lastSeen = time.Now()
 	w.instance.Send(payload.Data)
 }
 
-// cleanIdleWorkers - (需加写锁)
+// cleanIdleWorkers 回收逻辑保持不变 (需加写锁)
 func cleanIdleWorkers() {
 	workerMu.Lock()
 	defer workerMu.Unlock()

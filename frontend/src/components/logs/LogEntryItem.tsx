@@ -27,11 +27,11 @@ export function LogEntryItem({ log, visibleColumns }: LogEntryItemProps) {
         
         {/* 2. 内容预览区 - 核心复刻 vmui
             - whitespace-nowrap: 核心！禁止换行
-            - overflow-hidden: 超出父Container直接切断
+            - overflow-hidden: 超出父容器直接切断
         */}
         <div className="flex items-center gap-6 flex-1 overflow-hidden whitespace-nowrap min-w-0">
           {visibleColumns.map(col => (
-            //   shrink-0 确保字段不会因为宽度不够被挤扁，而是保持原样展示，直到被切断
+            // shrink-0 确保字段不会因为宽度不够被挤扁，而是保持原样展示，直到被切断
             <div key={col} className="flex items-baseline gap-2 shrink-0">
               {/* Key: 灰色、大写、粗体 */}
               <span className="text-[10px] font-black text-muted-foreground/50 uppercase font-mono tracking-tight shrink-0">
@@ -47,8 +47,8 @@ export function LogEntryItem({ log, visibleColumns }: LogEntryItemProps) {
         </div>
       </div>
 
-      {/* === 展开Status (Expanded) === 
-          需求：只展示 JSON，不重复展示字段List
+      {/* === 展开状态 (Expanded) === 
+          需求：只展示 JSON，不重复展示字段列表
       */}
       {isOpen && (
         <div className="px-8 pb-3 pt-1 animate-in fade-in slide-in-from-top-1 duration-150 cursor-auto">

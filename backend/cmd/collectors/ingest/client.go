@@ -49,7 +49,7 @@ func (c *Client) SendBatch(logs []ocsf.VSentryOCSFEvent) (success int, failed in
 		return 0, 0
 	}
 
-	//   【核心改造】：不使用 Marshal 生成大数Group，而是逐行 Encode 形成 JSONL
+	// 【核心改造】：不使用 Marshal 生成大数Group，而是逐行 Encode 形成 JSONL
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
 
@@ -66,7 +66,7 @@ func (c *Client) SendBatch(logs []ocsf.VSentryOCSFEvent) (success int, failed in
 		return 0, len(logs)
 	}
 
-	// 明确声明我们Send的是 - 流
+	// 明确声明我们Send的是 NDJSON 流
 	req.Header.Set("Content-Type", "application/x-ndjson")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
 

@@ -36,7 +36,7 @@ const formatDate = (dateStr?: string) => {
 export default function IngestPage() {
   const [ingests, setIngests] = useState<IngestConfig[]>([]);
   const [tokens, setTokens] = useState<Record<number, string>>({});
-  const [externalUrl, setExternalUrl] = useState<string>("http://  localhost:8088");
+  const [externalUrl, setExternalUrl] = useState<string>("http://localhost:8088");
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIngest, setEditingIngest] = useState<IngestConfig | null>(null);
@@ -52,7 +52,7 @@ export default function IngestPage() {
 
   const fetchIngests = async () => {
     try {
-      // Fetch - first
+      // Fetch config first
       try {
         const configRes = await configService.get();
         if (configRes.code === 200 && configRes.data?.external_url) {
@@ -72,7 +72,7 @@ export default function IngestPage() {
         }
         setIngests(list);
         
-        // Fetch - for each ingest
+        // Fetch tokens for each ingest
         const tokenMap: Record<number, string> = {};
         for (const ingest of list) {
           const id = ingest.ID || ingest.id;
@@ -319,7 +319,7 @@ export default function IngestPage() {
               <Label htmlFor="endpoint">Endpoint URL</Label>
               <Input
                 id="endpoint"
-                placeholder="http://  localhost:9428/insert/logsql"
+                placeholder="http://localhost:9428/insert/logsql"
                 value={formData.endpoint}
                 onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
               />

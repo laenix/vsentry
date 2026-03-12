@@ -20,7 +20,7 @@ func (p *EVTXParser) Parse(filePath string) ([]ForensicEvent, error) {
 	var events []ForensicEvent
 
 	for e := range ef.FastEvents() {
-		//   ✅ 修复：e 本身就是 GoEvtxMap，直接序列化它即可
+		// ✅ 修复：e 本身就是 GoEvtxMap，直接序列化它即可
 		eventJSON, err := json.Marshal(e)
 		if err != nil {
 			continue
@@ -34,20 +34,20 @@ func (p *EVTXParser) Parse(filePath string) ([]ForensicEvent, error) {
 			"raw_data":   string(eventJSON),
 		}
 
-		// 提取 - 核心元Data (兼容不同层级的 System 字段)
+		// 提取 EVTX 核心元Data (兼容不同层级的 System 字段)
 		var systemData map[string]interface{}
 		
-		// 0xrawsec - {"Event": {"System": {...}, "EventData": {...}}}
+		// 0xrawsec Parse出来的结构通常形如 {"Event": {"System": {...}, "EventData": {...}}}
 		if eventNode, ok := rawMap["Event"].(map[string]interface{}); ok {
 			if sys, ok := eventNode["System"].(map[string]interface{}); ok {
 				systemData = sys
 			}
 		} else if sys, ok := rawMap["System"].(map[string]interface{}); ok {
-			//   兜底：如果 System 直接在最外层
+			// 兜底：如果 System 直接在最外层
 			systemData = sys
 		}
 
-		// 如果Success拿到了 - Node，提取 EventID Sum Time
+		// 如果Success拿到了 System 节点，提取 EventID 和 Time
 		if systemData != nil {
 			if eventID, ok := systemData["EventID"].(map[string]interface{}); ok {
 				forensicEvt["event_id"] = eventID["Value"]

@@ -143,7 +143,7 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <Label className="text-muted-foreground">External URL</Label>
-                    <p className="font-medium">http://  150.109.14.216:8088</p>
+                    <p className="font-medium">http://150.109.14.216:8088</p>
                   </div>
                 </div>
               </CardContent>
@@ -190,7 +190,7 @@ export default function SettingsPage() {
                             <Badge variant="secondary">Active</Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            {id !== 1 && ( //   Don't allow deleting admin
+                            {id !== 1 && ( // Don't allow deleting admin
                               <Button
                                 variant="ghost"
                                 size="icon"

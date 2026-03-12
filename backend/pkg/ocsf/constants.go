@@ -1,10 +1,11 @@
 package ocsf
 
-//   ==============================================================================
-// OCSF - (符合 OCSF v1.3.0 规范)
-//   ==============================================================================
+// ==============================================================================
+// OCSF 核心常量定义 (符合 OCSF v1.3.0 规范)
+// ==============================================================================
 
-// 顶级分类 - const (
+// 顶级分Class Category
+const (
 	CategorySystem    = "System Activity"
 	CategoryFindings  = "Findings"
 	CategoryIdentity  = "Identity & Access Management"
@@ -13,33 +14,33 @@ package ocsf
 	CategoryDiscovery = "Discovery"
 )
 
-// 子类 - UID
+// 子Class Class UID
 const (
-	//   System (1xxx)
+	// System (1xxx)
 	ClassFileActivity     = 1001
 	ClassKernelExtension  = 1002
 	ClassProcessActivity  = 1007
 	ClassRegistryActivity = 1010
 	ClassScheduledJob     = 3005
 
-	//   Findings (2xxx)
+	// Findings (2xxx)
 	ClassSecurityFinding = 2001
 	ClassVulnerability   = 2002
 	ClassIncident        = 2003
 
-	//   Identity & Access (3xxx)
+	// Identity & Access (3xxx)
 	ClassAccountChange    = 3001
 	ClassAuthentication   = 3002
 	ClassAuthorization    = 3003
 	ClassEntityManagement = 3004
 
-	//   Network (4xxx)
+	// Network (4xxx)
 	ClassNetworkActivity = 4001
 	ClassHTTPActivity    = 4002
 	ClassDNSActivity     = 4003
 )
 
-// Critical程度 - ID (标准数字定义)
+// Critical程度 Severity ID (标准数字定义)
 const (
 	SeverityIDUnknown  = 0
 	SeverityIDInfo     = 1
@@ -49,7 +50,7 @@ const (
 	SeverityIDCritical = 5
 )
 
-// Critical程度 - 文本
+// Critical程度 Severity 文本
 const (
 	SeverityUnknown  = "Unknown"
 	SeverityInfo     = "Info"
@@ -59,7 +60,7 @@ const (
 	SeverityCritical = "Critical"
 )
 
-// 标准化Action - (统一行为Description)
+// 标准化Action Activity (统一行为Description)
 const (
 	ActionLogon       = "Logon"
 	ActionLogonFailed = "Logon Failed"

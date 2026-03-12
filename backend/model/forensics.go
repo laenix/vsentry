@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-// ForensicTask - (Case/沙箱)
+// ForensicTask ForensicsTask (Case/沙箱)
 type ForensicTask struct {
 	ID          uint           `json:"id" gorm:"primarykey"`
 	Name        string         `json:"name" gorm:"type:varchar(255);not null"`
@@ -11,11 +11,11 @@ type ForensicTask struct {
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	
-	//   ✅ New增：一对多关联，方便Query时一次性拉出所有EvidenceFile
+	// ✅ New增：一对多关联，方便Query时一次性拉出所有EvidenceFile
 	Files       []ForensicFile `json:"files" gorm:"foreignKey:TaskID"` 
 }
 
-// ForensicFile - (保持你原来的不变即可)
+// ForensicFile ForensicsEvidenceFile (保持你原来的不变即可)
 type ForensicFile struct {
 	ID           uint      `json:"id" gorm:"primarykey"`
 	TaskID       uint      `json:"task_id" gorm:"index;not null"`

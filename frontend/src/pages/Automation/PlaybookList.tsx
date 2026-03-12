@@ -1,12 +1,14 @@
-//   src/pages/Automation/PlaybookList.tsx
+// src/pages/Automation/PlaybookList.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit2, MoreHorizontal, Zap, Link as LinkIcon, Loader2, ShieldCheck } from "lucide-react";
-import { automationService } from "@/services/automation"; // import - { Playbook } from "@/services/automation";       //  
-import { ruleService } from "@/services/rules";       // import - { DetectionRule } from "@/services/rules";        //  
+import { automationService } from "@/services/automation"; //
+import type { Playbook } from "@/services/automation";       //
+import { ruleService } from "@/services/rules";       //
+import type { DetectionRule } from "@/services/rules";        //
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,10 +21,11 @@ interface PlaybookListProps {
 export default function PlaybookList({ viewMode }: PlaybookListProps) {
   const navigate = useNavigate();
   const [data, setData] = useState<Playbook[]>([]);
-  const [allRules, setAllRules] = useState<DetectionRule[]>([]); //  
+  const [allRules, setAllRules] = useState<DetectionRule[]>([]); //
   const [loading, setLoading] = useState(true);
 
-  // 绑定模式专用Status - [selectedPb, setSelectedPb] = useState<Playbook | null>(null);
+  // 绑定模式专用Status
+  const [selectedPb, setSelectedPb] = useState<Playbook | null>(null);
   const [boundRuleIds, setBoundRuleIds] = useState<number[]>([]);
   const [syncing, setSyncing] = useState(false);
 
@@ -30,11 +33,11 @@ export default function PlaybookList({ viewMode }: PlaybookListProps) {
     setLoading(true);
     try {
       const [pbRes, ruleRes] = await Promise.all([
-        automationService.getList(), //  
-        ruleService.list()           //  
+        automationService.getList(), //
+        ruleService.list()           //
       ]);
       setData(pbRes.data || []);
-      setAllRules(ruleRes.data || []); //  
+      setAllRules(ruleRes.data || []); //
     } finally {
       setLoading(false);
     }
@@ -42,11 +45,11 @@ export default function PlaybookList({ viewMode }: PlaybookListProps) {
 
   useEffect(() => { fetchData(); }, []);
 
-  //   当在绑定模式选MediumPlaybook时，拉取其绑定的Rule
+  // 当在绑定模式选MediumPlaybook时，拉取其绑定的Rule
   useEffect(() => {
     if (viewMode === 'binding' && selectedPb) {
       setSyncing(true);
-      automationService.getBoundRules(selectedPb.ID) //  
+      automationService.getBoundRules(selectedPb.ID) //
         .then(res => setBoundRuleIds((res.data || []).map((r: any) => r.ID || r.id)))
         .finally(() => setSyncing(false));
     }
@@ -57,7 +60,7 @@ export default function PlaybookList({ viewMode }: PlaybookListProps) {
     const newIds = checked ? [...boundRuleIds, ruleId] : boundRuleIds.filter(id => id !== ruleId);
     try {
       setSyncing(true);
-      await automationService.bindRules(selectedPb.ID, newIds); //  
+      await automationService.bindRules(selectedPb.ID, newIds); //
       setBoundRuleIds(newIds);
       toast.success("Binding updated");
     } catch (e) {
@@ -69,7 +72,7 @@ export default function PlaybookList({ viewMode }: PlaybookListProps) {
 
   if (loading && data.length === 0) return <div className="flex justify-center p-12"><Loader2 className="animate-spin" /></div>;
 
-  //   --- 模式 A: 纯List展示 ---
+  // --- 模式 A: 纯List展示 ---
   if (viewMode === 'list') {
     return (
       <div className="border rounded-md bg-card shadow-sm">
@@ -104,7 +107,7 @@ export default function PlaybookList({ viewMode }: PlaybookListProps) {
     );
   }
 
-  //   --- 模式 B: 左右分栏绑定Manage ---
+  // --- 模式 B: 左右分栏绑定Manage ---
   return (
     <div className="grid grid-cols-12 gap-6 h-[calc(100vh-280px)]">
       {/* 左侧：Playbook List */}

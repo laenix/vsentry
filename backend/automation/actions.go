@@ -12,7 +12,7 @@ import (
 	"github.com/expr-lang/expr"
 )
 
-// RunHTTPRequest - HTTP RequestAction
+// RunHTTPRequest Execute标准 HTTP RequestAction
 func RunHTTPRequest(config map[string]interface{}) StepResult {
 	url, _ := config["url"].(string)
 	method, _ := config["method"].(string)
@@ -52,7 +52,7 @@ func RunHTTPRequest(config map[string]interface{}) StepResult {
 	}
 }
 
-// RunSendEmail - SMTP Send邮件Action
+// RunSendEmail Execute SMTP Send邮件Action
 func RunSendEmail(config map[string]interface{}) StepResult {
 	host, _ := config["host"].(string)
 	port := 25
@@ -60,7 +60,7 @@ func RunSendEmail(config map[string]interface{}) StepResult {
 		port = int(p)
 	}
 	username, _ := config["username"].(string)
-	password, _ := config["password"].(string) //   如果为空，则不使用Auth
+	password, _ := config["password"].(string) // 如果为空，则不使用Auth
 	to, _ := config["to"].(string)
 	subject, _ := config["subject"].(string)
 	content, _ := config["content"].(string)
@@ -68,31 +68,31 @@ func RunSendEmail(config map[string]interface{}) StepResult {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	msg := []byte(fmt.Sprintf("To: %s\r\n"+
 		"Subject: %s\r\n"+
-		"MIME-Version: 1.0\r\n"+ //   [New增]
-		"Content-Type: text/html; charset=UTF-8\r\n"+ //   [关键：改为 text/html]
+		"MIME-Version: 1.0\r\n"+ // [New增]
+		"Content-Type: text/html; charset=UTF-8\r\n"+ // [关键：改为 text/html]
 		"\r\n"+
 		"%s", to, subject, content))
 
-	//   1. 建立 TCP Connection
+	// 1. 建立 TCP Connection
 	c, err := smtp.Dial(addr)
 	if err != nil {
 		return StepResult{Status: "failed", Error: "Dial error: " + err.Error()}
 	}
 	defer c.Close()
 
-	//   2. 关键修复：ConfigSkip TLS Validate
-	// Resolve - .png Medium的 x509 证书Check问题
+	// 2. 关键修复：配置Skip TLS Validate
+	// 解决 image_a2101e.png Medium的 x509 证书Check问题
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: true,
 		ServerName:         host,
 	}
 	if err = c.StartTLS(tlsConfig); err != nil {
-		// 如果Server不支持 - ，这里报错CanIgnore，或者根据实际情况Degrade到普通Connection
-		// For - SMTP，有些Server可能完全不提供 StartTLS
+		// 如果Service器不支持 TLS，这里报错可以Ignore，或者根据实际情况降级到普通Connection
+		// 针对内网 SMTP，有些Service器可能完全不提供 StartTLS
 		fmt.Printf("Warning: StartTLS failed: %v\n", err)
 	}
 
-	//   3. 关键修复：支持无Auth模式
+	// 3. 关键修复：支持无Auth模式
 	if password != "" {
 		auth := smtp.PlainAuth("", username, password, host)
 		if err = c.Auth(auth); err != nil {
@@ -100,7 +100,7 @@ func RunSendEmail(config map[string]interface{}) StepResult {
 		}
 	}
 
-	//   4. Send邮件流程
+	// 4. Send邮件流程
 	if err = c.Mail(username); err != nil {
 		return StepResult{Status: "failed", Error: err.Error()}
 	}
@@ -125,7 +125,7 @@ func RunSendEmail(config map[string]interface{}) StepResult {
 	return StepResult{Status: "success", Output: "Email sent successfully"}
 }
 
-// RunExpression - Expr ExpressionNode (Pro-Code)
+// RunExpression Execute纯 Expr Expression节点 (Pro-Code)
 func RunExpression(config map[string]interface{}, ctx *ExecutionContext) StepResult {
 	exprStr, _ := config["expression"].(string)
 	env := createExprEnv(ctx)
@@ -143,12 +143,13 @@ func RunExpression(config map[string]interface{}, ctx *ExecutionContext) StepRes
 	return StepResult{Status: "success", Output: output}
 }
 
-// RunCondition - func RunCondition(config map[string]interface{}, ctx *ExecutionContext) StepResult {
-	// 如果Config了 - 优先走 Pro-Code 逻辑
+// RunCondition ExecuteCondition分支判断
+func RunCondition(config map[string]interface{}, ctx *ExecutionContext) StepResult {
+	// 如果配置了 expression 优先走 Pro-Code 逻辑
 	if exprStr, ok := config["expression"].(string); ok && exprStr != "" {
 		return RunExpression(config, ctx)
 	}
 
-	// 否则走 - -Code List判断 (省略重复逻辑，建议前端统一传 expression)
+	// 否则走 Low-Code List判断 (省略重复逻辑，建议ago端统一传 expression)
 	return StepResult{Status: "failed", Error: "No valid expression found"}
 }

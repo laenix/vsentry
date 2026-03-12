@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { LogSQLEditor } from "@/components/editor/LogSQLEditor"
 import { ruleService, type RuleType } from "@/services/rules"
 import type { DetectionRule } from "@/services/rules"
-import { runVLQuery } from "@/lib/api/vl-client" //   ✅ 引入LogQuery API
+import { runVLQuery } from "@/lib/api/vl-client" // ✅ 引入LogQuery API
 import { toast } from "sonner"
 import { Loader2, Play, Info, Clock, CheckCircle, AlertTriangle, Terminal } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -25,7 +25,8 @@ interface RuleDialogProps {
   onSuccess: () => void
 }
 
-// 预设 - const CRON_PRESETS = [
+// 预设 Cron
+const CRON_PRESETS = [
   { label: "Every 1 Minute", value: "0 */1 * * * *" },
   { label: "Every 5 Minutes", value: "0 */5 * * * *" },
   { label: "Every 15 Minutes", value: "0 */15 * * * *" },
@@ -42,26 +43,27 @@ const SEVERITY_OPTIONS = [
 ]
 
 const RULE_TYPE_OPTIONS = [
-  { value: "alert", label: "Alert Rule", desc: "Execute detection on schedule (Cron)" },
-  { value: "forensic", label: "Forensics Rule", desc: "Auto-trigger after evidence upload" },
-  { value: "investigation", label: "Investigation Rule", desc: "Manual execution" },
+  { value: "alert", label: "报警规则", desc: "按 Cron 定时执行检测" },
+  { value: "forensic", label: "取证规则", desc: "证据上传后自动触发" },
+  { value: "investigation", label: "调查规则", desc: "手动选择执行" },
 ]
 
 const BACKTRACE_START_OPTIONS = [
-  { value: "1y", label: "1 year ago" },
-  { value: "180d", label: "180 days ago" },
-  { value: "90d", label: "90 days ago" },
-  { value: "30d", label: "30 days ago" },
-  { value: "7d", label: "7 days ago" },
+  { value: "1y", label: "1年前" },
+  { value: "180d", label: "180天前" },
+  { value: "90d", label: "90天前" },
+  { value: "30d", label: "30天前" },
+  { value: "7d", label: "7天前" },
 ]
 
 export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleDialogProps) {
   const isEditMode = !!initialData
   const [loading, setLoading] = useState(false)
-  const [testing, setTesting] = useState(false) //   ✅ 试Run Loading Status
-  const [testResult, setTestResult] = useState<{ success: boolean; msg: string; sample?: string } | null>(null) //   ✅ 试Run结果
+  const [testing, setTesting] = useState(false) // ✅ 试Run Loading Status
+  const [testResult, setTestResult] = useState<{ success: boolean; msg: string; sample?: string } | null>(null) // ✅ 试Run结果
 
-  // 表单Status - [name, setName] = useState("")
+  // 表单Status
+  const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [query, setQuery] = useState("")
   const [severity, setSeverity] = useState("medium")
@@ -74,7 +76,8 @@ export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleD
 
   useEffect(() => {
     if (open) {
-      setTestResult(null) // 重置Test结果 - (initialData) {
+      setTestResult(null) // 重置Test结果
+      if (initialData) {
         setName(initialData.name)
         setDescription(initialData.description || "")
         setQuery(initialData.query)
@@ -100,7 +103,7 @@ export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleD
     }
   }, [open, initialData])
 
-  //   ✅ 真正的试Run逻辑
+  // ✅ 真正的试Run逻辑
   const handleTestRun = async () => {
     if (!query.trim()) {
       toast.error("Please enter a query first");
@@ -111,14 +114,14 @@ export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleD
     setTestResult(null);
 
     try {
-      //   这里的 "10" 会被传递给 VictoriaLogs 的 /select/logsql?limit=10 Interface
+      // 这里的 "10" 会被传递给 VictoriaLogs 的 /select/logsql?limit=10 Interface
       const res = await runVLQuery(query, "10");
       
       if (res.length > 0) {
         setTestResult({
           success: true,
           msg: `Query valid! Matched ${res.length} logs (Limit applied: 10).`,
-          sample: JSON.stringify(res[0], null, 2) //   取第一条做样本
+          sample: JSON.stringify(res[0], null, 2) // 取第一条做样本
         });
         toast.success("Test run successful");
       } else {
@@ -271,7 +274,7 @@ export function RuleDialog({ open, onOpenChange, initialData, onSuccess }: RuleD
                 </div>
               </div>
 
-              {/* 回溯Config - 仅报警Rule显示 */}
+              {/* 回溯配置 - 仅报警Rule显示 */}
               {ruleType === "alert" && (
                 <div className="space-y-3 border-t pt-4 mt-2">
                   <div className="flex items-center justify-between">

@@ -1,26 +1,28 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
 
-//   1. 定义 Tab Type，包含所有模块
+// 1. 定义 Tab Type，包含所有模块
 export type TabType = 
-  | 'overview'     //   总览
-  | 'logs'         //   LogQuery
-  | 'incidents'    //   EventMedium心
-  | 'investigation' //   InvestigationMedium心
-  | 'forensics'     //   ForensicsMedium心
-  | 'rules'        //   RuleMedium心
-  | 'automation'   //   Automation
-  | 'connectors'   //   集成
-  | 'ingest'       //   接入点Manage
-  | 'collectors'   //   Collect器
-  | 'custom-logs'  //   自定义Log
-  | 'settings'     // Settings - interface Tab {
+  | 'overview'     // 总览
+  | 'logs'         // LogQuery
+  | 'incidents'    // EventMedium心
+  | 'investigation' // InvestigationMedium心
+  | 'forensics'     // ForensicsMedium心
+  | 'rules'        // RuleMedium心
+  | 'automation'   // Automation
+  | 'connectors'   // 集成
+  | 'ingest'       // 接入点Manage
+  | 'collectors'   // Collect器
+  | 'custom-logs'  // 自定义Log
+  | 'settings'     // Settings
+
+export interface Tab {
   id: string
   type: TabType
   title: string
   data?: {
     query?: string     
-    incident_id?: number //   ✅ New增：Allow传递EventID作为上下文
+    incident_id?: number // ✅ New增：Allow传递EventID作为上下文
     [key: string]: any
   }
 }
@@ -35,7 +37,8 @@ interface TabState {
   closeAll: () => void
 }
 
-// 自动生成标题映射 - defaultTitles: Record<TabType, string> = {
+// 自动生成标题映射
+const defaultTitles: Record<TabType, string> = {
   overview: 'Overview',
   logs: 'Logs Query',
   incidents: 'Incidents Center',
@@ -84,7 +87,8 @@ export const useTabStore = create<TabState>()(
 
       if (id === state.activeTabId) {
         if (newTabs.length > 0) {
-          // Activate前一个标签 - deletedIndex = state.tabs.findIndex(t => t.id === id)
+          // 激活ago一个标签
+          const deletedIndex = state.tabs.findIndex(t => t.id === id)
           newActiveId = newTabs[deletedIndex] ? newTabs[deletedIndex].id : newTabs[newTabs.length - 1].id
         } else {
           newActiveId = null

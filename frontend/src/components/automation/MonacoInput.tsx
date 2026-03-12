@@ -8,7 +8,7 @@ interface MonacoInputProps {
   height?: string;
   language?: string;
   placeholder?: string;
-  //   ✅ New增：Receive动态上下文Data (来自 Test Run 的结果)
+  // ✅ New增：Receive动态上下文Data (来自 Test Run 的结果)
   contextData?: Record<string, any>;
 }
 
@@ -22,13 +22,13 @@ export function MonacoInput({
   const monaco = useMonaco();
   const editorRef = useRef<any>(null);
 
-  //   ✅ 核心：当 monaco Instance或 contextData Change时，重New注册补全逻辑
+  // ✅ 核心：当 monaco 实例或 contextData 变化时，重NewRegister补全逻辑
   useEffect(() => {
     if (monaco) {
-      //   注册并Get销毁函数 (Disposable)
+      // Register并GetDestroyFunction (Disposable)
       const disposable = registerAutomationCompletion(monaco, contextData);
       
-      //   清理函数：Group件卸载或DataUpdate时，销毁旧的补全注册，防止重复
+      // 清理Function：Group件Unmount或DataUpdate时，Destroy旧的补全Register，防止重复
       return () => {
         disposable.dispose();
       };
@@ -55,7 +55,7 @@ export function MonacoInput({
       fontSize: 12,
       wordWrap: 'off',
       padding: { top: 6, bottom: 6 },
-      //   关键：让补全Menu浮动在 body 上，避免被侧边栏遮挡
+      // 关键：让补全Menu浮动在 body 上，避免被侧边栏遮挡
       fixedOverflowWidgets: true 
     });
   };
@@ -74,7 +74,7 @@ export function MonacoInput({
           automaticLayout: true,
           tabSize: 2,
           fixedOverflowWidgets: true,
-          //   Optimize：单行模式下Disable回车换行
+          // Optimize：单行模式下Disable回车换行
           acceptSuggestionOnEnter: "on",
         }}
       />

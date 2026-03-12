@@ -8,21 +8,21 @@ import { KeyValueList } from './KeyValueList';
 interface ConfigPanelProps {
   selectedNode: Node | null;
   onUpdateNode: (id: string, data: any) => void;
-  //   ✅ 核心：Receive来自 PlaybookEditor 轮询到的Execute结果
+  // ✅ 核心：Receive来自 PlaybookEditor 轮询到的Execute结果
   executionContext?: Record<string, any>;
 }
 
 export default function ConfigPanel({ selectedNode, onUpdateNode, executionContext }: ConfigPanelProps) {
   const [config, setConfig] = useState<any>({});
 
-  //   当选MediumNode切换时，Sync本地ConfigStatus
+  // 当选Medium节点切换时，Sync本地配置Status
   useEffect(() => {
     if (selectedNode) {
       setConfig(selectedNode.data.config || {});
     }
   }, [selectedNode]);
 
-  // UpdateConfig并实时Sync回 - Flow State
+  // Update配置并实时Sync回 React Flow State
   const updateConfig = (key: string, value: any) => {
     const newConfig = { ...config, [key]: value };
     setConfig(newConfig);
@@ -67,7 +67,7 @@ export default function ConfigPanel({ selectedNode, onUpdateNode, executionConte
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-6">
           
-          {/* ================= 触发器Config (Trigger) ================= */}
+          {/* ================= 触发器配置 (Trigger) ================= */}
           {type === 'trigger' && (
              <div className="space-y-4">
                <div className="space-y-2">
@@ -134,7 +134,7 @@ export default function ConfigPanel({ selectedNode, onUpdateNode, executionConte
              </div>
           )}
 
-          {/* ================= HTTP RequestConfig (Action) ================= */}
+          {/* ================= HTTP Request配置 (Action) ================= */}
           {type === 'http_request' && (
             <>
               <div className="space-y-3">
@@ -156,7 +156,7 @@ export default function ConfigPanel({ selectedNode, onUpdateNode, executionConte
                     <MonacoInput 
                       value={config.url || ''} 
                       onChange={(val) => updateConfig('url', val)} 
-                      contextData={executionContext} //   ✅ 动态补全注入
+                      contextData={executionContext} // ✅ 动态补全注入
                       language="expr"
                     />
                   </div>
@@ -197,7 +197,7 @@ export default function ConfigPanel({ selectedNode, onUpdateNode, executionConte
                     value={config.expression || ''}
                     onChange={(val) => updateConfig('expression', val)}
                     height="100px"
-                    language="expr" //   ✅ 使用 expr 语法High亮
+                    language="expr" // ✅ 使用 expr 语法High亮
                     contextData={executionContext}
                  />
                </div>
@@ -217,14 +217,14 @@ export default function ConfigPanel({ selectedNode, onUpdateNode, executionConte
                     value={config.expression || ''}
                     onChange={(val) => updateConfig('expression', val)}
                     height="120px"
-                    language="expr" //   ✅ 使用 expr 语法High亮
+                    language="expr" // ✅ 使用 expr 语法High亮
                     contextData={executionContext}
                  />
                </div>
             </div>
           )}
 
-          {/* ================= 邮件SendConfig (Send Email) ================= */}
+          {/* ================= 邮件Send配置 (Send Email) ================= */}
           {type === 'send_email' && (
             <>
                <div className="space-y-3 p-3 border rounded bg-slate-50/50">

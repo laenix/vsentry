@@ -17,10 +17,10 @@ export const logSQLLanguageDef: monaco.languages.IMonarchLanguage = {
 
   tokenizer: {
     root: [
-      //   管道符High亮 (亮橙色)
+      // 管道符High亮 (亮橙色)
       [/\|/, 'keyword.flow'],
       
-      //   字段名 (浅蓝色)
+      // 字段名 (浅蓝色)
       [/[a-zA-Z_][\w$]*/, {
         cases: {
           '@keywords': 'keyword',
@@ -28,10 +28,10 @@ export const logSQLLanguageDef: monaco.languages.IMonarchLanguage = {
         }
       }],
 
-      //   数字
+      // 数字
       [/\d+/, 'number'],
 
-      //   字符串
+      // 字符串
       [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
       [/`/, { token: 'string.quote', bracket: '@open', next: '@backtick' }],
     ],

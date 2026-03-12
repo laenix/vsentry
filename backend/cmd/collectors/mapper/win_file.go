@@ -11,13 +11,13 @@ func init() {
 func mapFileActivity(unmapped map[string]interface{}, entry *ocsf.VSentryOCSFEvent) {
 	entry.CategoryName = ocsf.CategorySystem
 	entry.ClassName = "File Activity"
-	entry.ClassUID = 1001 // OCSF - Activity
+	entry.ClassUID = 1001 // OCSF File Activity
 
 	eventID := entry.Unmapped["event_id"].(int)
 
 	filePath := GetStr(unmapped, "ObjectName")
 	if filePath == "" {
-		filePath = GetStr(unmapped, "TargetFilename") //   Sysmon
+		filePath = GetStr(unmapped, "TargetFilename") // Sysmon
 	}
 
 	entry.Unmapped["file_path"] = filePath
@@ -37,7 +37,7 @@ func mapFileActivity(unmapped map[string]interface{}, entry *ocsf.VSentryOCSFEve
 	switch eventID {
 	case 4663:
 		accessMask := GetStr(unmapped, "AccessMask")
-		// 0x2 - , 0x1 读取, 0x10000 Delete
+		// 0x2 写入, 0x1 读取, 0x10000 Delete
 		if accessMask == "0x2" || accessMask == "0x6" {
 			entry.ActivityName = "Write"
 		} else if accessMask == "0x10000" {

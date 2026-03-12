@@ -11,18 +11,19 @@ interface LogJsonViewProps {
 export function LogJsonView({ data }: LogJsonViewProps) {
   const parentRef = useRef<HTMLDivElement>(null)
 
-  //   1. 虚拟滚动Config：支持动态High度测量
-  // JSON - ，Must使用 measureElement 实时计算
+  // 1. 虚拟滚动配置：支持动态High度测量
+  // JSON 块的High度差异巨大，必须使用 measureElement 实时计算
   const rowVirtualizer = useVirtualizer({
     count: data.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 180, // 给一个合理的初始预估High度 - : 5, // 预渲染 - 项，防止滚动过快白屏
+    estimateSize: () => 180, // 给一个合理的初始预估High度
+    overscan: 5, // 预Render 5 项，防止滚动过快白屏
     measureElement: (el) => el.getBoundingClientRect().height,
   })
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text)
-    // 如果有 - Group件：toast.success("JSON copied to clipboard")
+    // 如果有 toast Group件：toast.success("JSON copied to clipboard")
   }
 
   if (data.length === 0) {
@@ -48,8 +49,8 @@ export function LogJsonView({ data }: LogJsonViewProps) {
           return (
             <div
               key={virtualRow.key}
-              data-index={virtualRow.index} //   ✅ Must：供 measureElement 识别
-              ref={rowVirtualizer.measureElement} //   ✅ Must：绑定测量 ref
+              data-index={virtualRow.index} // ✅ 必须：供 measureElement 识别
+              ref={rowVirtualizer.measureElement} // ✅ 必须：绑定测量 ref
               className="absolute top-0 left-0 w-full px-2 py-1.5"
               style={{
                 transform: `translateY(${virtualRow.start}px)`,
@@ -57,7 +58,7 @@ export function LogJsonView({ data }: LogJsonViewProps) {
             >
               <div className="relative group border border-border/60 rounded-md bg-muted/10 hover:bg-muted/20 transition-colors shadow-sm">
                 
-                {/* 装饰性头部：显示行号SumTime */}
+                {/* 装饰性头部：显示行号和Time */}
                 <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/40 bg-muted/20 rounded-t-md select-none">
                   <div className="flex items-center gap-2">
                     <Terminal className="w-3 h-3 text-emerald-600/70" />

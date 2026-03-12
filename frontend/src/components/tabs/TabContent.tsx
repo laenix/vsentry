@@ -2,7 +2,7 @@ import { X, Activity } from "lucide-react"
 import { useTabStore } from "@/stores/tab-store"
 import { cn } from "@/lib/utils"
 
-//   1. Import所有页面Group件 (确保你已经在对应的 pages Directory下Create了 index.tsx)
+// 1. Import所有PageGroup件 (确保你已经在对应的 pages 目录下Create了 index.tsx)
 import LogsPage from "@/pages/Logs"
 import DashboardPage from "@/pages/Dashboard"
 import ConnectorsPage from "@/pages/Connectors"
@@ -15,14 +15,14 @@ import CollectorsPage from "@/pages/Collectors"
 import CustomLogsPage from "@/pages/CustomLogs"
 import SettingsPage from "@/pages/Settings"
 
-//   ✅ New增Import ForensicsPage
+// ✅ New增Import ForensicsPage
 import ForensicsPage from "@/pages/Forensics"
 import ForensicInvestigationPage from "@/pages/Forensics/ForensicInvestigation"
 
 export function TabContent() {
   const { tabs, activeTabId, setActiveTab, removeTab } = useTabStore()
 
-  //   2. 根据 Tab Type映射对应的页面Group件
+  // 2. 根据 Tab Type映射对应的PageGroup件
   const renderContent = (type: string, tabId: string, tabData: any) => {
     switch (type) {
       case 'dashboard':     return <DashboardPage />
@@ -75,7 +75,7 @@ export function TabContent() {
         ))}
       </div>
 
-      {/* 核心 Keep-Alive Container */}
+      {/* 核心 Keep-Alive 容器 */}
       <div className="flex-1 overflow-hidden relative">
         {tabs.map((tab) => (
           <div

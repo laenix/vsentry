@@ -20,7 +20,8 @@ interface CollectorDialogProps {
   onToggleSource: (type: string) => void;
   onUpdateSourceConfig: (type: string, field: 'event_ids_str' | 'query', value: string) => void;
   onPresetClick: (source: DataSource, presetIds: string) => void;
-  onUpdateSourcePath: (type: string, newPath: string) => void; // New增属性 - : () => void;
+  onUpdateSourcePath: (type: string, newPath: string) => void; // New增Props
+  onSubmit: () => void;
   submitting: boolean;
 }
 

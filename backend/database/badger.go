@@ -9,7 +9,7 @@ import (
 
 var Cache *badger.DB
 
-// IngestCache - B：Storage鉴权后的完整Config
+// IngestCache 方案 B：Storage鉴权后的完整配置
 type IngestCache struct {
 	ID           uint   `json:"id"`
 	Endpoint     string `json:"endpoint"`
@@ -17,16 +17,18 @@ type IngestCache struct {
 }
 
 func InitBadger() {
-	// 建议Path与 - 放在一起或根据 config Get
+	// 建议Path与 sqlite 放在一起或根据 config Get
 	opts := badger.DefaultOptions("./badger_data")
-	opts.Logger = nil // 保持Log整洁 - , err := badger.Open(opts)
+	opts.Logger = nil // 保持Log整洁
+
+	db, err := badger.Open(opts)
 	if err != nil {
 		log.Fatalf("failed to open badger: %v", err)
 	}
 	Cache = db
 }
 
-// SetTokenCache - Token 映射，支持过期Time（可选）
+// SetTokenCache Settings或Update Token 映射，支持过期Time（可选）
 func SetTokenCache(token string, data IngestCache) error {
 	val, _ := json.Marshal(data)
 	return Cache.Update(func(txn *badger.Txn) error {
@@ -34,7 +36,8 @@ func SetTokenCache(token string, data IngestCache) error {
 	})
 }
 
-// GetTokenCache - func GetTokenCache(token string) (*IngestCache, error) {
+// GetTokenCache Get缓存
+func GetTokenCache(token string) (*IngestCache, error) {
 	var data IngestCache
 	err := Cache.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte("t:" + token))
@@ -51,7 +54,7 @@ func SetTokenCache(token string, data IngestCache) error {
 	return &data, nil
 }
 
-// DelTokenCache - ：Delete特定 Token
+// DelTokenCache 用于缓存一致性：Delete特定 Token
 func DelTokenCache(token string) error {
 	return Cache.Update(func(txn *badger.Txn) error {
 		return txn.Delete([]byte("t:" + token))

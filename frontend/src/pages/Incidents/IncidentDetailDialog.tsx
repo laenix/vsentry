@@ -15,15 +15,16 @@ import { ReadOnlyJsonViewer } from "@/components/editor/ReadOnlyJsonViewer";
 import { toast } from "sonner";
 import { useTabStore } from "@/stores/tab-store";
 
-//   1. Interface定义：对齐 Go 后端结构
+// 1. Interface定义：对齐 Go 后端结构
 interface Alert {
   id: number;
-  //   兼容多种Time字段格式 (Go CreatedAt 或 JSON _time)
+  // 兼容多种Time字段格式 (Go CreatedAt 或 JSON _time)
   created_at?: string;
   CreatedAt?: string;
   _time?: string;
 
-  content: string;     // 原始 - fingerprint: string;
+  content: string;     // 原始 JSON
+  fingerprint: string;
 }
 
 interface IncidentDetail extends Incident {
@@ -51,7 +52,7 @@ export function IncidentDetailDialog({
   const [loading, setLoading] = useState(false);
   const { addTab } = useTabStore();
 
-  //   1. LoadDetail
+  // 1. 加载Detail
   useEffect(() => {
     if (open && alertId) {
       const fetchDetail = async () => {
@@ -71,17 +72,17 @@ export function IncidentDetailDialog({
       fetchDetail();
     }
   }, [open, alertId]);
-  //   ✅ New增：Close当前Detail弹窗，并在后台打开Investigation Tab
+  // ✅ New增：关闭当agoDetail弹窗，并在后台打开Investigation Tab
   const launchInvestigation = () => {
     if (!data) return;
-    onOpenChange(false); //   关掉弹窗，让视野更清爽
+    onOpenChange(false); // 关掉弹窗，让视野更清爽
     addTab('investigation', `Investigate #${data.ID}`, {
       incident_id: data.ID
     });
   };
-  //   ✅ 2. 核心：在New窗口打开纯Time范围Query
+  // ✅ 2. 核心：在New窗口打开纯Time范围Query
   const handleInvestigateNewWindow = (alert: Alert) => {
-    //   A. 智能GetTime
+    // A. 智能GetTime
     const timeStr = alert.created_at || alert.CreatedAt || alert._time || new Date().toISOString();
     const eventTime = new Date(timeStr).getTime();
 
@@ -90,20 +91,20 @@ export function IncidentDetailDialog({
       return;
     }
 
-    //   B. 计算前后 5 分钟 (Context Buffer)
+    // B. 计算ago后 5 minutes (Context Buffer)
     const BUFFER_MS = 5 * 60 * 1000;
     const start = new Date(eventTime - BUFFER_MS).toISOString();
     const end = new Date(eventTime + BUFFER_MS).toISOString();
 
-    //   C. 构造 VictoriaLogs 标准Time范围Query
-    //   语法: _time:[start_iso, end_iso]
-    // 不包含 - 或 content，只看这段Time发生了什么
+    // C. 构造 VictoriaLogs 标准Time范围Query
+    // 语法: _time:[start_iso, end_iso]
+    // 不包含 fingerprint 或 content，只看这段Time发生了什么
     const vlQuery = `_time:[${start}, ${end}]`;
 
-    //   D. 构造 URL (只带 q Parameter)
+    // D. 构造 URL (只带 q 参数)
     const url = `/logs?q=${encodeURIComponent(vlQuery)}`;
 
-    //   E. 在New标签页打开
+    // E. 在New标签页打开
     window.open(url, '_blank');
 
     toast.success("Context investigation opened in new tab");
@@ -255,7 +256,7 @@ export function IncidentDetailDialog({
   );
 }
 
-//   辅助Group件：Info卡片
+// 辅助Group件：Info卡片
 function SummaryCard({ icon, label, value }: { icon: any; label: string; value: string }) {
   return (
     <div className="bg-card border rounded-lg p-3 space-y-1 shadow-sm">

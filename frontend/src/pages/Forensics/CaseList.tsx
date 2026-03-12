@@ -18,7 +18,8 @@ export function CaseList({ onOpenCase }: CaseListProps) {
   const [tasks, setTasks] = useState<ForensicTask[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // CreateCase弹窗Status - [createOpen, setCreateOpen] = useState(false);
+  // CreateCase弹窗Status
+  const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
 
@@ -58,7 +59,8 @@ export function CaseList({ onOpenCase }: CaseListProps) {
   };
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
-    e.stopPropagation(); // 阻止触发打开Case的点击Event - (!confirm("Delete this case and all its files permanently?")) return;
+    e.stopPropagation(); // 阻止触发打开Case的点击Event
+    if (!confirm("Delete this case and all its files permanently?")) return;
     try {
       await forensicsService.deleteTask(id);
       toast.success("Case deleted");

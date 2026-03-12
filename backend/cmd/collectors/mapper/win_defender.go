@@ -5,14 +5,14 @@ import (
 )
 
 func init() {
-	// Windows - Operational Logs
+	// Windows Defender Operational Logs
 	Register([]int{1116, 1117}, mapDefender)
 }
 
 func mapDefender(unmapped map[string]interface{}, entry *ocsf.VSentryOCSFEvent) {
 	entry.CategoryName = ocsf.CategoryFindings
 	entry.ClassName = "Security Finding"
-	entry.ClassUID = 2001 // OCSF - Finding
+	entry.ClassUID = 2001 // OCSF Security Finding
 	entry.Severity = ocsf.SeverityCritical
 	entry.SeverityID = ocsf.SeverityIDCritical
 
@@ -27,6 +27,7 @@ func mapDefender(unmapped map[string]interface{}, entry *ocsf.VSentryOCSFEvent) 
 		entry.ActivityName = "Malware Remediation Action"
 	}
 
-	// 将威胁NameSum感染Path提取出来 - .Unmapped["threat_name"] = threatName
+	// 将威胁Name和感染Path提取出来
+	entry.Unmapped["threat_name"] = threatName
 	entry.Unmapped["infected_path"] = targetFile
 }

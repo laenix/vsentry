@@ -7,54 +7,61 @@ import (
 )
 
 var connectorTemplates = []model.ConnectorTemplate{
-	// Security - {ID: "palo_alto", Name: "Palo Alto Firewall", Type: model.ConnectorTypeSecurity, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "Palo Alto Networks Firewall", Icon: "shield"},
+	// Security Tools
+	{ID: "palo_alto", Name: "Palo Alto Firewall", Type: model.ConnectorTypeSecurity, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "Palo Alto Networks Firewall", Icon: "shield"},
 	{ID: "fortinet", Name: "Fortinet FortiGate", Type: model.ConnectorTypeSecurity, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "Fortinet FortiGate Firewall", Icon: "shield"},
 	{ID: "crowdstrike", Name: "CrowdStrike EDR", Type: model.ConnectorTypeSecurity, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "CrowdStrike Endpoint Detection", Icon: "shield"},
 	{ID: "sentinelone", Name: "SentinelOne", Type: model.ConnectorTypeSecurity, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "SentinelOne EDR", Icon: "shield"},
 	{ID: "splunk", Name: "Splunk", Type: model.ConnectorTypeSecurity, Protocol: model.ProtocolAPI, DefaultPort: 8089, Description: "Splunk SIEM", Icon: "database"},
 	{ID: "qualys", Name: "Qualys", Type: model.ConnectorTypeSecurity, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "Qualys Vulnerability Scanner", Icon: "search"},
 	
-	// Network - {ID: "cisco_asa", Name: "Cisco ASA", Type: model.ConnectorTypeNetwork, Protocol: model.ProtocolSyslog, DefaultPort: 514, Description: "Cisco Adaptive Security Appliance", Icon: "router"},
+	// Network Devices
+	{ID: "cisco_asa", Name: "Cisco ASA", Type: model.ConnectorTypeNetwork, Protocol: model.ProtocolSyslog, DefaultPort: 514, Description: "Cisco Adaptive Security Appliance", Icon: "router"},
 	{ID: "cisco_ios", Name: "Cisco IOS Switch/Router", Type: model.ConnectorTypeNetwork, Protocol: model.ProtocolSSH, DefaultPort: 22, Description: "Cisco IOS Devices", Icon: "router"},
 	{ID: "juniper", Name: "Juniper SRX", Type: model.ConnectorTypeNetwork, Protocol: model.ProtocolSyslog, DefaultPort: 514, Description: "Juniper SRX Firewall", Icon: "router"},
 	{ID: "f5", Name: "F5 BIG-IP", Type: model.ConnectorTypeNetwork, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "F5 BIG-IP Load Balancer", Icon: "router"},
 	
-	// Cloud - {ID: "aws_cloudtrail", Name: "AWS CloudTrail", Type: model.ConnectorTypeCloud, Protocol: model.ProtocolS3, DefaultPort: 443, Description: "AWS CloudTrail Logs", Icon: "cloud"},
+	// Cloud Services
+	{ID: "aws_cloudtrail", Name: "AWS CloudTrail", Type: model.ConnectorTypeCloud, Protocol: model.ProtocolS3, DefaultPort: 443, Description: "AWS CloudTrail Logs", Icon: "cloud"},
 	{ID: "azure_activity", Name: "Azure Activity Log", Type: model.ConnectorTypeCloud, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "Azure Activity Logs", Icon: "cloud"},
 	{ID: "gcp_audit", Name: "GCP Audit Logs", Type: model.ConnectorTypeCloud, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "Google Cloud Audit Logs", Icon: "cloud"},
 	{ID: "aws_waf", Name: "AWS WAF", Type: model.ConnectorTypeCloud, Protocol: model.ProtocolS3, DefaultPort: 443, Description: "AWS WAF Logs", Icon: "shield"},
 	
-	// SaaS - {ID: "office365", Name: "Microsoft Office 365", Type: model.ConnectorTypeApp, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "Office 365 Audit Logs", Icon: "file-text"},
+	// SaaS Applications
+	{ID: "office365", Name: "Microsoft Office 365", Type: model.ConnectorTypeApp, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "Office 365 Audit Logs", Icon: "file-text"},
 	{ID: "salesforce", Name: "Salesforce", Type: model.ConnectorTypeApp, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "Salesforce Audit Logs", Icon: "database"},
 	{ID: "okta", Name: "Okta", Type: model.ConnectorTypeApp, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "Okta Identity Logs", Icon: "key"},
 	{ID: "github", Name: "GitHub", Type: model.ConnectorTypeApp, Protocol: model.ProtocolAPI, DefaultPort: 443, Description: "GitHub Audit Logs", Icon: "git-branch"},
 	
-	//   Databases
+	// Databases
 	{ID: "mysql", Name: "MySQL", Type: model.ConnectorTypeDatabase, Protocol: model.ProtocolJDBC, DefaultPort: 3306, Description: "MySQL Database", Icon: "database"},
 	{ID: "postgresql", Name: "PostgreSQL", Type: model.ConnectorTypeDatabase, Protocol: model.ProtocolJDBC, DefaultPort: 5432, Description: "PostgreSQL Database", Icon: "database"},
 	{ID: "mssql", Name: "SQL Server", Type: model.ConnectorTypeDatabase, Protocol: model.ProtocolJDBC, DefaultPort: 1433, Description: "Microsoft SQL Server", Icon: "database"},
 	
-	//   Middleware
+	// Middleware
 	{ID: "nginx", Name: "Nginx", Type: model.ConnectorTypeMiddleware, Protocol: model.ProtocolSyslog, DefaultPort: 514, Description: "Nginx Access/Error Logs", Icon: "server"},
 	{ID: "apache", Name: "Apache", Type: model.ConnectorTypeMiddleware, Protocol: model.ProtocolSyslog, DefaultPort: 514, Description: "Apache Access Logs", Icon: "server"},
 	{ID: "kafka", Name: "Apache Kafka", Type: model.ConnectorTypeMiddleware, Protocol: model.ProtocolKafka, DefaultPort: 9092, Description: "Kafka Broker", Icon: "message-square"},
 }
 
-// ListConnectors - func ListConnectors(ctx *gin.Context) {
+// ListConnectors GetConnection器List
+func ListConnectors(ctx *gin.Context) {
 	db := database.GetDB()
 	var connectors []model.Connector
 	db.Find(&connectors)
 	ctx.JSON(200, gin.H{"code": 200, "data": connectors})
 }
 
-// GetConnectorTemplates - func GetConnectorTemplates(ctx *gin.Context) {
+// GetConnectorTemplates GetConnection器TemplateList
+func GetConnectorTemplates(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{"code": 200, "data": connectorTemplates})
 }
 
-// AddConnector - func AddConnector(ctx *gin.Context) {
+// AddConnector AddConnection器
+func AddConnector(ctx *gin.Context) {
 	var connector model.Connector
 	if err := ctx.ShouldBindJSON(&connector); err != nil {
-		ctx.JSON(400, gin.H{"msg": "Parameter error"})
+		ctx.JSON(400, gin.H{"msg": "参数错误"})
 		return
 	}
 
@@ -68,10 +75,11 @@ var connectorTemplates = []model.ConnectorTemplate{
 	ctx.JSON(200, gin.H{"code": 200, "msg": "Created successfully", "data": connector})
 }
 
-// UpdateConnector - func UpdateConnector(ctx *gin.Context) {
+// UpdateConnector UpdateConnection器
+func UpdateConnector(ctx *gin.Context) {
 	var req model.Connector
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(400, gin.H{"msg": "Parameter error"})
+		ctx.JSON(400, gin.H{"msg": "参数错误"})
 		return
 	}
 
@@ -91,7 +99,8 @@ var connectorTemplates = []model.ConnectorTemplate{
 	ctx.JSON(200, gin.H{"code": 200, "msg": "Updated successfully"})
 }
 
-// DeleteConnector - func DeleteConnector(ctx *gin.Context) {
+// DeleteConnector DeleteConnection器
+func DeleteConnector(ctx *gin.Context) {
 	id := ctx.Query("id")
 	if id == "" {
 		ctx.JSON(400, gin.H{"msg": "ID is required"})
@@ -102,15 +111,17 @@ var connectorTemplates = []model.ConnectorTemplate{
 	ctx.JSON(200, gin.H{"code": 200, "msg": "Deleted successfully"})
 }
 
-// TestConnector - func TestConnector(ctx *gin.Context) {
+// TestConnector TestConnection器配置
+func TestConnector(ctx *gin.Context) {
 	var req model.Connector
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(400, gin.H{"msg": "Parameter error"})
+		ctx.JSON(400, gin.H{"msg": "参数错误"})
 		return
 	}
 
-	//   TODO: 实现实际的ConnectionTest逻辑
-	// 这里Return模拟结果 - .JSON(200, gin.H{
+	// TODO: 实现实际的ConnectionTest逻辑
+	// 这里Return模拟结果
+	ctx.JSON(200, gin.H{
 		"code": 200,
 		"msg":  "Connection test not implemented yet",
 		"data": gin.H{"status": "pending"},

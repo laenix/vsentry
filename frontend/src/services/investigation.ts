@@ -1,7 +1,7 @@
 import { apiClient } from "@/lib/api/vsentry-client";
 import type { APIResponse } from "@/lib/api/vsentry-client";
 
-//   InvestigationRule: 来自 Rule Center 的InvestigationRule
+// InvestigationRule: 来自 Rule Center 的InvestigationRule
 export interface InvestigationRule {
   id: number;
   name: string;
@@ -11,12 +11,13 @@ export interface InvestigationRule {
   enabled: boolean;
 }
 
-// InvestigationPage - export interface InvestigationDirective {
+// InvestigationPage 使用的指令Type
+export interface InvestigationDirective {
   id: number;
   name: string;
   description: string;
   logsql: string;
-  parameters: string; // JSON - ，如 '["src_ip", "hostname"]'
+  parameters: string; // JSON 数Group字符串，如 '["src_ip", "hostname"]'
 }
 
 export interface ExecuteParams {
@@ -33,7 +34,7 @@ export interface ExecuteResult {
   context_used: Record<string, string>;
 }
 
-// 自动从 - /Query Medium提取Parameter ${xxx}
+// 自动从 LogSQL/Query Medium提取参数 ${xxx}
 export function extractParameters(query: string): string[] {
   const paramRegex = /\$\{([^}]+)\}/g;
   const params: string[] = [];
@@ -45,10 +46,11 @@ export function extractParameters(query: string): string[] {
 }
 
 export const investigationService = {
-  // 从 - Center Get type="investigation" 的Rule
+  // 从 Rule Center Get type="investigation" 的Rule
   listRules: () => 
     apiClient.get<any, APIResponse<{ rules: InvestigationRule[] }>>("/rules/list"),
 
-  // ExecuteInvestigation - : (data: ExecuteParams) => 
+  // ExecuteInvestigation
+  execute: (data: ExecuteParams) => 
     apiClient.post<any, APIResponse<ExecuteResult>>("/investigation/execute", data),
 };

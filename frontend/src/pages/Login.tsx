@@ -17,11 +17,12 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const data = await authService.login(username, password);
-      // Save - localStorage.setItem("vsentry_token", data.token);
+      // Save Token
+      localStorage.setItem("vsentry_token", data.token);
       toast.success("Login successful");
-      navigate("/"); //   跳转到首页
+      navigate("/"); // 跳转到首页
     } catch (err) {
-      //   Error已在拦截器Handle，或在此处额外Handle
+      // Error已在拦截器Handle，或在此处额外Handle
     } finally {
       setLoading(false);
     }

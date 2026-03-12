@@ -18,27 +18,30 @@ const QUICK_RANGES = [
   { label: "Last 1 year", value: "1y" },
 ]
 export function TimeRangePicker({ value, onChange }: { value: string, onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false) // 控制弹窗开关 - [startDate, setStartDate] = useState<Date | undefined>(subMinutes(new Date(), 5))
+  const [open, setOpen] = useState(false) // 控制弹窗开关
+  const [startDate, setStartDate] = useState<Date | undefined>(subMinutes(new Date(), 5))
   const [endDate, setEndDate] = useState<Date | undefined>(new Date())
 
   const currentLabel = QUICK_RANGES.find(r => r.value === value)?.label || value
 
-  // Handle快捷Select - handleQuickSelect = (val: string) => {
+  // Handle快捷Select
+  const handleQuickSelect = (val: string) => {
     onChange(val)
-    setOpen(false) //   点击后自动Close
+    setOpen(false) // 点击后自动关闭
   }
 
-  // Handle绝对TimeApplication - handleApplyCustom = () => {
+  // Handle绝对TimeApplication
+  const handleApplyCustom = () => {
   if (startDate && endDate) {
-    // VictoriaLogs - _time:[YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SSZ]
-    // 使用 - 确保生成 2026-02-11T18:00:00Z 这种标准格式
+    // VictoriaLogs 识别的语法是 _time:[YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SSZ]
+    // 使用 formatISO 确保生成 2026-02-11T18:00:00Z 这种标准格式
     const startISO = startDate.toISOString()
     const endISO = endDate.toISOString()
     
-    // 生成 - 语法
+    // 生成 LogsQL 语法
     const customValue = `_time:[${startISO}, ${endISO}]`
     
-    onChange(customValue) // 将这个值传给 - 的 timeRange Status
+    onChange(customValue) // 将这个值传给 LogsPage 的 timeRange Status
     setOpen(false)
   }
 }

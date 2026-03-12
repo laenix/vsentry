@@ -8,64 +8,68 @@ import (
 	"github.com/laenix/vsentry/model"
 )
 
-// BindRulesToPlaybook - //   POST /api/playbooks/:id/bind-rules
+// BindRulesToPlaybook 建立Playbook与Rule的绑定关系
+// POST /api/playbooks/:id/bind-rules
 func BindRulesToPlaybook(ctx *gin.Context) {
 	playbookID := ctx.Param("id")
 	var req struct {
 		RuleIDs []uint `json:"rule_ids"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Parameter error"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误"})
 		return
 	}
 
 	db := database.GetDB()
 	var playbook model.Playbook
 	if err := db.First(&playbook, playbookID).Error; err != nil {
-		ctx.JSON(http.StatusNot found, gin.H{"code": 404, "msg": "Playbook不存在"})
+		ctx.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "剧本不存在"})
 		return
 	}
 
-	//   1. 先Load现有的 Rules 关联
-	db.Model(&playbook).Association("Rules").Clear() //   如果是全量覆盖模式
+	// 1. 先加载现有的 Rules 关联
+	db.Model(&playbook).Association("Rules").Clear() // 如果是全量覆盖模式
 
-	//   2. 查找要绑定的Rule并关联
+	// 2. 查找要绑定的Rule并关联
 	var rules []model.Rule
 	db.Where("id IN ?", req.RuleIDs).Find(&rules)
 	
 	if err := db.Model(&playbook).Association("Rules").Append(&rules); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "绑定Failed"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "绑定失败"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Rule绑定Success"})
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "规则绑定成功"})
 }
 
-// GetBoundRules - //   GET /api/playbooks/:id/rules
+// GetBoundRules Get当agoPlaybook绑定的所有Rule
+// GET /api/playbooks/:id/rules
 func GetBoundRules(ctx *gin.Context) {
 	playbookID := ctx.Param("id")
 	var playbook model.Playbook
 	
-	// 使用 - 预Load关联的 Rules
+	// 使用 Preload 预加载关联的 Rules
 	if err := database.GetDB().Preload("Rules").First(&playbook, playbookID).Error; err != nil {
-		ctx.JSON(http.StatusNot found, gin.H{"code": 404, "msg": "未找到Playbook"})
+		ctx.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "未找到剧本"})
 		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"code": 200, "data": playbook.Rules})
 }
 
-// UnbindRuleFromPlaybook - //   DELETE /api/playbooks/:id/rules/:rule_id
+// UnbindRuleFromPlaybook 解绑单个Rule
+// DELETE /api/playbooks/:id/rules/:rule_id
 func UnbindRuleFromPlaybook(ctx *gin.Context) {
 	playbookID := ctx.Param("id")
 	ruleID := ctx.Param("rule_id")
 
 	db := database.GetDB()
-	// 直接从Medium间表MediumDelete记录 - := db.Exec("DELETE FROM rule_playbooks WHERE playbook_id = ? AND rule_id = ?", playbookID, ruleID).Error
+	// 直接从Medium间表MediumDelete记录
+	err := db.Exec("DELETE FROM rule_playbooks WHERE playbook_id = ? AND rule_id = ?", playbookID, ruleID).Error
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "解绑Failed"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "解绑失败"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "解绑Success"})
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "解绑成功"})
 }

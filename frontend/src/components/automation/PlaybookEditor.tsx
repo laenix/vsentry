@@ -28,7 +28,7 @@ import { automationService } from "@/services/automation";
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-//   --- 自定义Node UI 定义 ---
+// --- 自定义节点 UI 定义 ---
 const icons: any = {
     trigger: Zap,
     action: Terminal,
@@ -75,7 +75,7 @@ const CustomNode = ({ data, selected }: any) => {
 };
 const nodeTypes = { custom: CustomNode };
 
-//   --- 侧边栏拖拽项 ---
+// --- 侧边栏拖拽项 ---
 function DraggableItem({ icon: Icon, type, label, color }: { icon: any, type: string, label: string, color: string }) {
     const onDragStart = (event: React.DragEvent, nodeType: string, nodeLabel: string) => {
         event.dataTransfer.setData('application/reactflow/type', nodeType);
@@ -93,7 +93,7 @@ function DraggableItem({ icon: Icon, type, label, color }: { icon: any, type: st
     );
 }
 
-//   --- Edit器主内容 ---
+// --- Edit器主内容 ---
 interface PlaybookEditorProps {
     playbookId: string;
     playbookName?: string;
@@ -115,7 +115,7 @@ function PlaybookEditorContent({ playbookId, initialNodes, initialEdges, onBack,
     const [isRunning, setIsRunning] = useState(false);
     const [executionContext, setExecutionContext] = useState<Record<string, any>>({});
 
-    //   ✅ 核心：提取当前Playbook的 Trigger Config
+    // ✅ 核心：提取当agoPlaybook的 Trigger 配置
     const triggerNode = nodes.find(n => n.data.type === 'trigger');
     const triggerConfig = triggerNode?.data.config || {};
 
@@ -183,7 +183,7 @@ function PlaybookEditorContent({ playbookId, initialNodes, initialEdges, onBack,
         }
     };
 
-    //   ✅ 修正后的 Test Run 逻辑：支持手动触发 Mock Data
+    // ✅ 修正后的 Test Run 逻辑：支持手动触发 Mock Data
     const handleTestRun = async (testData: { incident_id?: number; mock_data?: any }) => {
         if (playbookId === 'new') {
             toast.warning("Save the playbook before running tests.");
@@ -197,7 +197,7 @@ function PlaybookEditorContent({ playbookId, initialNodes, initialEdges, onBack,
             if (testData.incident_id) payload.incident_id = testData.incident_id;
             if (testData.mock_data) payload.mock_context = testData.mock_data;
 
-            const res = await automationService.runTest(playbookId, payload); //  
+            const res = await automationService.runTest(playbookId, payload); //
 
             if (res.code === 200) {
                 const execId = res.data.execution_id;
@@ -206,11 +206,11 @@ function PlaybookEditorContent({ playbookId, initialNodes, initialEdges, onBack,
                 let attempts = 0;
                 const poll = setInterval(async () => {
                     attempts++;
-                    const detailRes = await automationService.getExecutionDetail(execId); //  
+                    const detailRes = await automationService.getExecutionDetail(execId); //
                     if (detailRes.data && detailRes.data.status !== 'running') {
                         clearInterval(poll);
                         setIsRunning(false);
-                        setExecutionContext(detailRes.data.logs || {}); //  
+                        setExecutionContext(detailRes.data.logs || {}); //
                         toast.success("Run finished. Context injected for autocomplete.");
                     }
                     if (attempts > 20) {
@@ -300,7 +300,7 @@ function PlaybookEditorContent({ playbookId, initialNodes, initialEdges, onBack,
                     <ConfigPanel
                         selectedNode={selectedNode}
                         onUpdateNode={handleUpdateNode}
-                        executionContext={executionContext} //  
+                        executionContext={executionContext} //
                     />
                 </div>
             </div>
@@ -308,8 +308,8 @@ function PlaybookEditorContent({ playbookId, initialNodes, initialEdges, onBack,
             <TestRunDialog
                 open={testDialogOpen}
                 onOpenChange={setTestDialogOpen}
-                onRun={handleTestRun} //  
-                triggerConfig={triggerConfig} //  
+                onRun={handleTestRun} //
+                triggerConfig={triggerConfig} //
             />
         </div>
     );

@@ -13,7 +13,7 @@ var (
 )
 
 func init() {
-	//   注册Handle "auth" Sum "secure" Type的Log
+	// RegisterHandle "auth" 和 "secure" Type的Log
 	RegisterText([]string{"auth", "secure"}, mapSSHAuth)
 }
 
@@ -27,7 +27,8 @@ func mapSSHAuth(line string, entry *ocsf.VSentryOCSFEvent) {
 	}
 	entry.Metadata.Product = "sshd"
 
-	// 行为定性 - strings.Contains(line, "Accepted password") || strings.Contains(line, "session opened") || strings.Contains(line, "Accepted publickey") {
+	// 行为定性
+	if strings.Contains(line, "Accepted password") || strings.Contains(line, "session opened") || strings.Contains(line, "Accepted publickey") {
 		entry.ActivityName = ocsf.ActionLogon
 		entry.Severity = ocsf.SeverityInfo
 		entry.SeverityID = ocsf.SeverityIDInfo
@@ -41,7 +42,8 @@ func mapSSHAuth(line string, entry *ocsf.VSentryOCSFEvent) {
 		entry.SeverityID = ocsf.SeverityIDCritical
 	}
 
-	// 实体提取 - ipMatch := sshIpRe.FindStringSubmatch(line); len(ipMatch) > 1 {
+	// 实体提取
+	if ipMatch := sshIpRe.FindStringSubmatch(line); len(ipMatch) > 1 {
 		entry.SrcEndpoint = &ocsf.Endpoint{IP: ipMatch[1]}
 	}
 

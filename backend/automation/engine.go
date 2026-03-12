@@ -16,22 +16,23 @@ func NewEngine() *Engine {
 	return &Engine{}
 }
 
-// Run - func (e *Engine) Run(playbookID uint, inputContext map[string]interface{}) (uint, error) {
+// Run 是PlaybookExecute的核心入口
+func (e *Engine) Run(playbookID uint, inputContext map[string]interface{}) (uint, error) {
 	db := database.GetDB()
 
-	//   1. GetPlaybook定义
+	// 1. GetPlaybook定义
 	var playbook model.Playbook
 	if err := db.First(&playbook, playbookID).Error; err != nil {
 		return 0, fmt.Errorf("playbook not found: %v", err)
 	}
 
-	//   2. Parse React Flow 定义
+	// 2. Parse React Flow 定义
 	var def WorkflowDefinition
 	if err := json.Unmarshal(playbook.Definition, &def); err != nil {
 		return 0, fmt.Errorf("invalid definition: %v", err)
 	}
 
-	//   3. CreateExecute记录
+	// 3. CreateExecute记录
 	execution := model.PlaybookExecution{
 		PlaybookID: playbookID,
 		Status:     "running",
@@ -40,8 +41,8 @@ func NewEngine() *Engine {
 	}
 	db.Create(&execution)
 
-	//   4. 初始化上下文
-	// 无论 - 还是 incident 触发，统一将初始Data放入 Global
+	// 4. Initialize上下文
+	// 无论 manual 还是 incident 触发，统一将初始Data放入 Global
 	ctx := &ExecutionContext{
 		PlaybookID:  playbookID,
 		ExecutionID: execution.ID,
@@ -49,7 +50,7 @@ func NewEngine() *Engine {
 		Steps:       make(map[string]StepResult),
 	}
 
-	//   5. 构建Node索引与邻接表
+	// 5. 构建节点索引与邻接表
 	nodeMap := make(map[string]Node)
 	for _, n := range def.Nodes {
 		nodeMap[n.ID] = n
@@ -59,7 +60,7 @@ func NewEngine() *Engine {
 		adj[edge.Source] = append(adj[edge.Source], edge)
 	}
 
-	//   6. 查找起点 (Trigger Node)
+	// 6. 查找起点 (Trigger 节点)
 	var startNode *Node
 	for _, n := range def.Nodes {
 		if n.Data.Type == "trigger" {
@@ -72,7 +73,7 @@ func NewEngine() *Engine {
 		return execution.ID, fmt.Errorf("no trigger node")
 	}
 
-	//   7. Execute逻辑 (单线程 BFS，支持分支Select)
+	// 7. Execute逻辑 (单线程 BFS，支持分支Select)
 	queue := []string{startNode.ID}
 	executedLogs := make(map[string]StepResult)
 	visited := make(map[string]bool)
@@ -88,11 +89,12 @@ func NewEngine() *Engine {
 
 		currNode := nodeMap[currID]
 
-		// Execute当前Node - := e.executeNode(currNode, ctx)
+		// Execute当ago节点
+		result := e.executeNode(currNode, ctx)
 		ctx.Steps[currID] = result
 		executedLogs[currID] = result
 
-		//   实时UpdateDatabaseLog，便于前端轮询Detail
+		// 实时UpdateData库Log，便于ago端轮询Detail
 		logBytes, _ := json.Marshal(executedLogs)
 		db.Model(&execution).Update("logs", logBytes)
 
@@ -101,10 +103,11 @@ func NewEngine() *Engine {
 			return execution.ID, nil
 		}
 
-		// 寻找下一跳 - := adj[currID]
+		// 寻找下一跳
+		edges := adj[currID]
 		for _, edge := range edges {
 			if currNode.Data.Type == "condition" {
-				// Handle - 分支跳转
+				// Handle Condition 分支跳转
 				boolRes, _ := result.Output.(bool)
 				if fmt.Sprintf("%v", boolRes) == edge.SourceHandle {
 					queue = append(queue, edge.Target)
@@ -120,24 +123,27 @@ func NewEngine() *Engine {
 }
 
 func (e *Engine) executeNode(node Node, ctx *ExecutionContext) StepResult {
-	// 调用 - .go Medium的 ResolveVariables HandleConfigMedium的 {{...}}
+	// 调用 variable.go Medium的 ResolveVariables Handle配置Medium的 {{...}}
 	resolvedConfig, err := ResolveVariables(node.Data.Config, ctx)
 	if err != nil {
 		return StepResult{Status: "failed", Error: err.Error()}
 	}
 
-	// Action分发 - node.Data.Type {
+	// Action分发
+	switch node.Data.Type {
 	case "trigger":
-		// Trigger - return StepResult{Status: "success", Output: ctx.Global}
+		// Trigger 节点将全局上下文作为Output
+		return StepResult{Status: "success", Output: ctx.Global}
 	case "http_request":
 		return RunHTTPRequest(resolvedConfig)
 	case "send_email":
 		return RunSendEmail(resolvedConfig)
 	case "expression":
-		// Run - -Code ExpressionNode
+		// Run Pro-Code Expression节点
 		return RunExpression(resolvedConfig, ctx)
 	case "condition":
-		// RunCondition判断Node - RunCondition(resolvedConfig, ctx)
+		// RunCondition判断节点
+		return RunCondition(resolvedConfig, ctx)
 	default:
 		return StepResult{Status: "failed", Error: "Unknown node type: " + node.Data.Type}
 	}

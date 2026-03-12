@@ -14,17 +14,17 @@ interface LogTableProps {
 export function LogTable({ data, onFilterClick }: LogTableProps) {
   const parentRef = useRef<HTMLDivElement>(null)
 
-  //   1. 列宽Status (保留一些默认值，其他动态计算)
+  // 1. 列宽Status (保留一些Default值，其他动态计算)
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
     _time: 220,
     _stream: 250,
     _msg: 600,
   })
 
-  //   2. 当前显示的列 (初始化为空，由 useEffect 决定)
+  // 2. 当ago显示的列 (Initialize为空，由 useEffect 决定)
   const [visibleColumns, setVisibleColumns] = useState<string[]>([])
 
-  //   --- 核心修改: 智能列检测逻辑 ---
+  // --- 核心修改: 智能列检测逻辑 ---
   useEffect(() => {
     if (!data || data.length === 0) return
 
@@ -33,36 +33,37 @@ export function LogTable({ data, onFilterClick }: LogTableProps) {
     const isRawLog = keys.includes("_time")
 
     if (isRawLog) {
-      // 场景 - : 原始Log
-      // 如果当前显示的列完全没有命MediumNewData的 - (说明之前可能是聚合View)，则重置
-      // 或者如果是第一次Load - hasValidColumns = visibleColumns.some(col => keys.includes(col))
+      // 场景 A: 原始Log
+      // 如果当ago显示的列完全没有命MediumNewData的 key (说明之ago可能是聚合View)，则重置
+      // 或者如果是第一次加载
+      const hasValidColumns = visibleColumns.some(col => keys.includes(col))
       if (!hasValidColumns || visibleColumns.length === 0) {
         setVisibleColumns(["_time", "_stream", "_msg"])
       }
     } else {
-      // 场景 - : 聚合Query (如 stats by ...)
-      //   聚合Query的字段通常是不固定的，所以每次结构Change都重置为所有字段
-      //   为了防止无限循环，我们比较 key 是否一致
+      // 场景 B: 聚合Query (如 stats by ...)
+      // 聚合Query的字段通常是不固定的，所以every次结构变化都重置为所有字段
+      // 为了防止无限循环，我们比较 key 是否一致
       const currentKeysStr = visibleColumns.sort().join(",")
       const newKeysStr = keys.sort().join(",")
       
       if (currentKeysStr !== newKeysStr) {
-        //   保持原始顺序 (通常 LogSQL Return的顺序是有意义的，如 Group Key 在前)
+        // 保持原始顺序 (通常 LogSQL Return的顺序是有意义的，如 Group Key 在ago)
         setVisibleColumns(Object.keys(firstRow)) 
       }
     }
-  }, [data]) // 依赖 - Change自动触发
+  }, [data]) // 依赖 data 变化自动触发
 
-  //   3. 提取所有可用字段 (用于下拉Menu筛选)
+  // 3. 提取所有可用字段 (用于下拉Menu筛选)
   const allFields = useMemo(() => {
     if (!data || data.length === 0) return []
     const keys = new Set<string>()
-    // 采样前 - 条Data提取 Key (避免遍历百万条Data)
+    // 采样ago 20 条Data提取 Key (避免遍历百万条Data)
     data.slice(0, 20).forEach(log => Object.keys(log).forEach(k => keys.add(k)))
     return Array.from(keys).sort()
   }, [data])
 
-  //   4. 拖拽调整列宽逻辑
+  // 4. 拖拽调整列宽逻辑
   const startResizing = (e: React.MouseEvent, col: string) => {
     e.preventDefault()
     const startX = e.pageX
@@ -84,25 +85,27 @@ export function LogTable({ data, onFilterClick }: LogTableProps) {
     document.body.style.cursor = "col-resize"
   }
 
-  //   5. 计算Table总宽度
+  // 5. 计算Table总宽度
   const totalTableWidth = useMemo(() => {
     return visibleColumns.reduce((acc, col) => acc + (columnWidths[col] || 150), 0)
   }, [visibleColumns, columnWidths])
 
-  //   6. 虚拟滚动Config
+  // 6. 虚拟滚动配置
   const rowVirtualizer = useVirtualizer({
     count: data.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 32, // 单行High度 - : 10,
+    estimateSize: () => 32, // 单行High度
+    overscan: 10,
   })
 
-  // 如果没有Data - (!data || data.length === 0) {
+  // 如果没有Data
+  if (!data || data.length === 0) {
     return <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No data available</div>
   }
 
   return (
     <div className="flex flex-col h-full bg-background border rounded-md overflow-hidden">
-      {/* 顶部工具栏: 列Config */}
+      {/* 顶部工具栏: 列配置 */}
       <div className="flex justify-end p-1 border-b bg-muted/20">
         <Popover>
           <PopoverTrigger asChild>
@@ -138,7 +141,7 @@ export function LogTable({ data, onFilterClick }: LogTableProps) {
         </Popover>
       </div>
 
-      {/* 滚动Container */}
+      {/* 滚动容器 */}
       <div
         ref={parentRef}
         className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/20"

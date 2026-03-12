@@ -10,7 +10,7 @@ import (
 	"github.com/laenix/vsentry/pkg/ocsf"
 )
 
-// AppCollector - (如 Nginx, MySQL, 业务System)
+// AppCollector 专门负责Collect跨平台的Application层纯文本Log (如 Nginx, MySQL, 业务System)
 type AppCollector struct {
 	cfg       config.AgentConfig
 	positions map[string]int64
@@ -23,13 +23,13 @@ func NewAppCollector(cfg config.AgentConfig) *AppCollector {
 	}
 }
 
-// Collect - Format 为 "file" 的Data源
+// Collect 只Handle Format 为 "file" 的Data源
 func (c *AppCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
 	var allLogs []ocsf.VSentryOCSFEvent
 
 	for _, source := range c.cfg.Sources {
 		if !source.Enabled || source.Format != "file" {
-			continue //   Ignore未Enable或不是普通File的源 (如 windows_event)
+			continue // Ignore未Enable或不是普通File的源 (如 windows_event)
 		}
 
 		logs, err := c.tailFile(source, 2000)
@@ -56,7 +56,7 @@ func (c *AppCollector) tailFile(source config.SourceConfig, batchLimit int) ([]o
 
 	lastPos := c.positions[source.Path]
 	if info.Size() < lastPos {
-		lastPos = 0 //   File被轮转截断
+		lastPos = 0 // File被轮转截断
 	}
 
 	_, err = file.Seek(lastPos, 0)
@@ -89,11 +89,12 @@ func (c *AppCollector) tailFile(source config.SourceConfig, batchLimit int) ([]o
 }
 
 func (c *AppCollector) parseAppLine(source config.SourceConfig, line string) ocsf.VSentryOCSFEvent {
-	// 构造Application层Log的基础 - 骨架
+	// 构造Application层Log的基础 OCSF 骨架
 	entry := ocsf.VSentryOCSFEvent{
 		Time:         time.Now().UTC().Format(time.RFC3339),
-		CategoryName: ocsf.CategoryApp, // 默认归类为Application层 - :    "Application Activity",
-		ClassUID:     1000, // 根据后续 - 覆盖
+		CategoryName: ocsf.CategoryApp, // Default归Class为Application层
+		ClassName:    "Application Activity",
+		ClassUID:     1000, // 根据后续 mapper 覆盖
 		SeverityID:   ocsf.SeverityIDInfo,
 		Severity:     ocsf.SeverityInfo,
 		RawData:      line,
@@ -105,7 +106,7 @@ func (c *AppCollector) parseAppLine(source config.SourceConfig, line string) ocs
 	}
 	entry.Unmapped["app_protocol"] = source.Type
 
-	// 移交给大一统的双Engine - (我们之前写的 linux_web.go 里的正则会在这里生效)
+	// 移交给大一统的双Engine Mapper (我们之ago写的 linux_web.go 里的正则会在这里生效)
 	mapper.EnrichText(source.Type, line, &entry)
 
 	return entry

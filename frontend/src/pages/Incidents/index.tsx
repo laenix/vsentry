@@ -20,16 +20,17 @@ export default function IncidentsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); 
   
-  // 弹窗StatusManage - [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  // 弹窗StatusManage
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [resolveTargetId, setResolveTargetId] = useState<number | null>(null);
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [assignTarget, setAssignTarget] = useState<Incident | null>(null);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
-  //  
+  //
   const { addTab } = useTabStore();
-  //   ✅ New增：一键StartInvestigation
+  // ✅ New增：一键StartInvestigation
   const handleDeepInvestigate = (incident: Incident) => {
     const id = getIncidentID(incident);
     addTab('investigation', `Investigate #${id}`, { 
@@ -37,17 +38,17 @@ export default function IncidentsPage() {
     });
   };
 
-  // Get真实 - (兼容后端 GORM 默认的大写 ID)
+  // Get真实 ID (兼容后端 GORM Default的大写 ID)
   const getIncidentID = (i: Incident) => i.ID || (i as any).id || 0;
 
-  //   1. LoadEventList
+  // 1. 加载EventList
   const fetchIncidents = async () => {
     setLoading(true);
     try {
       const res = await incidentService.list();
       if (res.code === 200) {
         let list = res.data || [];
-        //   按照最后活跃Time (last_seen) 倒序排列
+        // 按照最后活跃Time (last_seen) 倒序排列
         list.sort((a, b) => {
            const tA = new Date(a.last_seen || a.CreatedAt).getTime();
            const tB = new Date(b.last_seen || b.CreatedAt).getTime();
@@ -69,7 +70,7 @@ export default function IncidentsPage() {
     return () => clearInterval(timer);
   }, []);
 
-  //   2. HandleAcknowledge (Acknowledge)
+  // 2. Handle认领 (Acknowledge)
   const handleAcknowledge = async (id: number) => {
     try {
       await incidentService.acknowledge(id);
@@ -80,7 +81,7 @@ export default function IncidentsPage() {
     } catch (e) { console.error(e); }
   };
 
-  //   3. HandleClose (Resolve - 带有分类Sum评论Input)
+  // 3. Handle关闭 (Resolve - 带有分Class和评论Input)
   const handleConfirmResolve = async (classification: string, comment: string) => {
     if (!resolveTargetId) return;
     try {
@@ -92,7 +93,8 @@ export default function IncidentsPage() {
     } catch (e) { toast.error("Failed to resolve incident"); }
   };
 
-  // 前端Filter逻辑 - filteredData = incidents.filter(i => {
+  // ago端Filter逻辑
+  const filteredData = incidents.filter(i => {
     if (filter === "all") return true;
     return i.status === filter || (filter === "ack" && i.status === "acknowledged");
   });
@@ -242,11 +244,11 @@ export default function IncidentsPage() {
         </Table>
       </div>
 
-      {/* 弹窗Group件挂载 */}
+      {/* 弹窗Group件Mount */}
       <IncidentDetailDialog 
         open={detailOpen} 
         onOpenChange={setDetailOpen} 
-        alertId={selectedIncident ? getIncidentID(selectedIncident) : null} //   ✅ 传递 ID 以便触发Detail API
+        alertId={selectedIncident ? getIncidentID(selectedIncident) : null} // ✅ 传递 ID 以便触发Detail API
         onAcknowledge={handleAcknowledge}
         onResolve={(id: number) => { setResolveTargetId(id); setResolveDialogOpen(true); }}
       />

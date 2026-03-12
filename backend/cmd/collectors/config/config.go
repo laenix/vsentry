@@ -8,12 +8,12 @@ import (
 	"os"
 )
 
-//  go:embed config.json
+//go:embed config.json
 var embeddedConfigBytes []byte
 
 type AgentConfig struct {
 	Name         string         `json:"name"`
-	Type         string         `json:"type"` //   "windows", "linux", "macos"
+	Type         string         `json:"type"` // "windows", "linux", "macos"
 	Interval     int            `json:"interval"`
 	Sources      []SourceConfig `json:"sources"`
 	Endpoint     string         `json:"endpoint"`
@@ -27,17 +27,17 @@ type SourceConfig struct {
 	Path         string `json:"path"`
 	Format       string `json:"format"`
 	Enabled      bool   `json:"enabled"`
-	ReadFromHead bool   `json:"read_from_head"` //   是否Collect历史存量Log
+	ReadFromHead bool   `json:"read_from_head"` // 是否Collect历史存量Log
 
-	//   【New增】：High级Filter能力 (Windows EventLog 专用)
-	EventIDs []int  `json:"event_ids,omitempty"` // 只Collect指定的 - (如: [4624, 4625, 4688])
-	Query    string `json:"query,omitempty"`     // 供High级User直接编写的原生 - FilterCondition
+	// 【New增】：High级Filter能力 (Windows EventLog 专用)
+	EventIDs []int  `json:"event_ids,omitempty"` // 只Collect指定的 EventID (如: [4624, 4625, 4688])
+	Query    string `json:"query,omitempty"`     // 供High级User直接编写的原生 XPath FilterCondition
 }
 
 var Global AgentConfig
 
 func Init() {
-	//   CheckConfig是否为空 (防止Development者在本地直接 go run 误Start)
+	// Check配置是否为空 (防止Development者在本地直接 go run 误Start)
 	if len(bytes.TrimSpace(embeddedConfigBytes)) == 0 || string(bytes.TrimSpace(embeddedConfigBytes)) == "{}" {
 		log.Fatal("Agent configuration missing! Must be compiled by VSentry Backend.")
 	}
@@ -52,6 +52,6 @@ func Init() {
 	}
 
 	if Global.Interval <= 0 {
-		Global.Interval = 5 // 默认 - 秒Collect一次
+		Global.Interval = 5 // Default 5 secondsCollect一次
 	}
 }

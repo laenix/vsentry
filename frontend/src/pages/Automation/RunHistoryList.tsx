@@ -13,7 +13,7 @@ export default function RunHistoryList() {
   const [data, setData] = useState<PlaybookExecution[]>([]);
   const [loading, setLoading] = useState(true);
 
-  //   简单的轮询，每 5 秒Refresh一次List，看是否有NewTask完成
+  // 简单的轮询，every 5 secondsRefresh一次List，看是否有NewTask完成
   useEffect(() => {
     const fetchHistory = async () => {
       try {
@@ -23,14 +23,16 @@ export default function RunHistoryList() {
         }
       } catch (error) {
         console.error("Failed to load history", error);
-        // 不弹出 - 避免轮询时骚扰User
+        // 不弹出 toast 避免轮询时骚扰User
       } finally {
         setLoading(false);
       }
     };
 
     fetchHistory();
-    const interval = setInterval(fetchHistory, 5000); // 5s - return () => clearInterval(interval);
+    const interval = setInterval(fetchHistory, 5000); // 5s 轮询
+
+    return () => clearInterval(interval);
   }, []);
 
   if (loading && data.length === 0) {

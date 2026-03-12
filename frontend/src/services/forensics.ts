@@ -1,7 +1,7 @@
 import { apiClient } from "@/lib/api/vsentry-client";
 import type { APIResponse } from "@/lib/api/vsentry-client";
 
-//   ==================== Data模型Type定义 ====================
+// ==================== Data模型Type定义 ====================
 
 export type ParseStatus = 'pending' | 'parsing' | 'completed' | 'failed';
 
@@ -27,14 +27,14 @@ export interface ForensicTask {
   status: 'open' | 'closed';
   created_at: string;
   updated_at: string;
-  // 后端 - 关联带出的FileList
+  // 后端 Preload 关联带出的FileList
   files?: ForensicFile[]; 
 }
 
-//   ==================== API 交互层 ====================
+// ==================== API 交互层 ====================
 
 export const forensicsService = {
-  //   1. Case (Task) Manage
+  // 1. Case (Task) Manage
   listTasks: () => 
     apiClient.get<any, APIResponse<ForensicTask[]>>("/forensics/tasks"),
     
@@ -47,7 +47,7 @@ export const forensicsService = {
   deleteTask: (id: number | string) => 
     apiClient.delete<any, APIResponse<any>>(`/forensics/tasks/${id}`),
 
-  //   2. EvidenceFile (File) Manage
+  // 2. EvidenceFile (File) Manage
   uploadFile: (taskId: number | string, file: File) => {
     const formData = new FormData();
     formData.append("task_id", String(taskId));
@@ -66,7 +66,7 @@ export const forensicsService = {
   deleteFile: (id: number | string) => 
     apiClient.delete<any, APIResponse<any>>(`/forensics/files/${id}`),
 
-  //   3. ExecuteForensicsRule
+  // 3. ExecuteForensicsRule
   executeRules: (caseId: number, fileId: number, ruleIds: number[]) => 
     apiClient.post<any, APIResponse<any>>("/forensics/execute-rules", {
       case_id: caseId,

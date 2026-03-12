@@ -22,7 +22,7 @@ export const exprLanguageDef: monaco.languages.IMonarchLanguage = {
 
   tokenizer: {
     root: [
-      // Identifiers - keywords
+      // Identifiers and keywords
       [/[a-zA-Z_]\w*/, {
         cases: {
           '@keywords': 'keyword',
@@ -30,10 +30,10 @@ export const exprLanguageDef: monaco.languages.IMonarchLanguage = {
         }
       }],
 
-      //   Whitespace
+      // Whitespace
       { include: '@whitespace' },
 
-      // Delimiters - operators
+      // Delimiters and operators
       [/[{}()\[\]]/, '@brackets'],
       [/@symbols/, {
         cases: {
@@ -42,16 +42,16 @@ export const exprLanguageDef: monaco.languages.IMonarchLanguage = {
         }
       }],
 
-      //   Numbers
+      // Numbers
       [/\d*\.\d+([eE][\-+]?\d+)?/, 'number.float'],
       [/\d+/, 'number'],
 
-      //   Strings
-      [/"([^"\\]|\\.)*$/, 'string.invalid'],  //   non-teminated string
+      // Strings
+      [/"([^"\\]|\\.)*$/, 'string.invalid'],  // non-teminated string
       [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
       [/'/, { token: 'string.quote', bracket: '@open', next: '@stringSingle' }],
       
-      //   Variables (Context variables like incident.id)
+      // Variables (Context variables like incident.id)
       [/incident\.[a-zA-Z_]\w*/, 'variable.predefined'],
       [/steps\.[a-zA-Z_]\w*/, 'variable.predefined'],
     ],
@@ -80,7 +80,7 @@ export const registerExprLanguage = (monacoInstance: typeof monaco) => {
     monacoInstance.languages.register({ id: languageID });
     monacoInstance.languages.setMonarchTokensProvider(languageID, exprLanguageDef);
     
-    //   Settings一些基本的补全Config（括号匹配等）
+    // Settings一些基本的补全配置（括号匹配等）
     monacoInstance.languages.setLanguageConfiguration(languageID, {
       brackets: [
         ['{', '}'],

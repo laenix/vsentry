@@ -20,11 +20,13 @@ func InitDB() *gorm.DB {
 	if dbPath == "" {
 		dbPath = "vsentry.db"
 	}
-	// ConnectionDatabase - , err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	// ConnectionData库
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}
-	// 自动建立表 - .AutoMigrate(&model.User{})
+	//自动建立表
+	db.AutoMigrate(&model.User{})
 	db.AutoMigrate(&model.UserLoginLogs{})
 	db.AutoMigrate(&model.UserActionLogs{})
 	db.AutoMigrate(&model.Ingest{})
@@ -57,8 +59,8 @@ func createAdminIfNotExist(db *gorm.DB) {
 	if count == 0 {
 		log.Println("No users found, creating default admin...")
 
-		// 使用 - 加密预设Password
-		//   建议Password：admin123 (实际ProductionMedium请务必第一次Login后修改)
+		// 使用 bcrypt 加密预设Password
+		// 建议Password：admin123 (实际ProductionMedium请务必第一次Login后修改)
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 
 		admin := model.User{
@@ -83,23 +85,24 @@ func createDefaultIngest(db *gorm.DB) {
 
 	log.Println("No ingest found, creating default local VictoriaLogs...")
 
-	// 生成随机 - tokenBytes := make([]byte, 32)
+	// 生成随机 token
+	tokenBytes := make([]byte, 32)
 	rand.Read(tokenBytes)
 	token := hex.EncodeToString(tokenBytes)
 
-	//   Get外部访问Address（用于Client接入）
-	//   优先级：EnvironmentVariable EXTERNAL_URL > config.yaml > 默认值
+	// Get外部访问Address（用于Client接入）
+	// 优先级：EnvironmentVariable EXTERNAL_URL > config.yaml > Default值
 	externalURL := os.Getenv("EXTERNAL_URL")
 	if externalURL == "" {
 		externalURL = viper.GetString("server.external_url")
 	}
 	if externalURL == "" {
-		externalURL = "http://  localhost:8088"
+		externalURL = "http://localhost:8088"
 	}
 
 	log.Printf("Using external URL for ingest endpoint: %s", externalURL)
 
-	// Create默认 - - 使用外部URL（通过后端Transfer）
+	// CreateDefault Ingest - 使用外部URL（通过后端Transfer）
 	ingest := model.Ingest{
 		Name:         "VictoriaLogs Ingest",
 		Endpoint:     externalURL + "/api/ingest/collect",
@@ -113,7 +116,8 @@ func createDefaultIngest(db *gorm.DB) {
 		return
 	}
 
-	// Create对应的 - auth := model.IngestAuth{
+	// Create对应的 Auth
+	auth := model.IngestAuth{
 		IngestID:  ingest.ID,
 		SecretKey: token,
 	}
@@ -135,7 +139,7 @@ func createDefaultRules(db *gorm.DB) {
 	log.Println("Creating default forensic and investigation rules...")
 
 	defaultRules := []model.Rule{
-		// Forensic - (type = forensic)
+		// Forensic rules (type = forensic)
 		{
 			Name:        "Suspicious PowerShell Execution",
 			Description: "Detect suspicious PowerShell commands often used in attacks",
@@ -181,7 +185,7 @@ func createDefaultRules(db *gorm.DB) {
 			Enabled:     true,
 			Version:     1,
 		},
-		// Investigation - (type = investigation)
+		// Investigation rules (type = investigation)
 		{
 			Name:        "Host Timeline Investigation",
 			Description: "Query all events for a specific host within time range",
