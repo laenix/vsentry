@@ -209,6 +209,20 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
     if (incidentData) applyAlertContext(incidentData, parseInt(val));
   };
 
+  const handleIncidentChange = async (val: string) => {
+    // 切换 Incident 时重新加载
+    try {
+      const res = await incidentService.detail(Number(val));
+      if (res.code === 200 && res.data) {
+        setIncidentData(res.data);
+        setSelectedAlertIndex("0");
+        applyAlertContext(res.data, 0);
+      }
+    } catch (err) {
+      console.error("Failed to load incident:", err);
+    }
+  };
+
   const handleAddVar = () => {
     if (!newVarKey.trim() || !newVarValue.trim()) return;
     setContextVars(prev => ({ ...prev, [newVarKey.trim()]: newVarValue.trim() }));
@@ -293,7 +307,7 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
   // ==================== ViewRender ====================
 
   return (
-    <div className="p-4 h-full flex flex-col md:flex-row gap-4">
+    <div className="p-6 h-full flex flex-col md:flex-row gap-6">
       
       {/* 左侧区域：情报Panel */}
       <div className="w-full md:w-72 flex flex-col gap-2 flex-none overflow-hidden">
@@ -332,6 +346,7 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
           incidentData={incidentData}
           selectedAlertIdx={selectedAlertIdx}
           onAlertChange={handleAlertChange}
+          onIncidentChange={handleIncidentChange}
         />
         <TimelinePanel 
           mergedEvents={mergedEvents} 

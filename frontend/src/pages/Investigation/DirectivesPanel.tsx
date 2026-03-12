@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Activity, LayoutList, X, ExternalLink, Clock, Server, AlertTriangle } from "lucide-react";
+import { Search, Activity, LayoutList, X, ExternalLink } from "lucide-react";
 import { type InvestigationDirective } from "@/services/investigation";
 import { DirectivesSelectorDialog } from "./DirectivesSelectorDialog";
 
@@ -15,13 +15,14 @@ interface DirectivesPanelProps {
   loading: boolean;
   onExecute: () => void;
   onRefreshTemplates: () => void;
-  // 新增：时间范围和 Alert 选择
+  // 新增：时间范围和 Incident/Alert 选择
   timeRangeHours?: number;
   onTimeRangeChange?: (hours: number) => void;
   onApplyTimeRange?: () => void;
   incidentData?: any;
   selectedAlertIdx?: string;
   onAlertChange?: (val: string) => void;
+  onIncidentChange?: (val: string) => void;
 }
 
 export function DirectivesPanel({ 
@@ -38,6 +39,7 @@ export function DirectivesPanel({
   incidentData,
   selectedAlertIdx,
   onAlertChange,
+  onIncidentChange,
 }: DirectivesPanelProps) {
   const [selectorOpen, setSelectorOpen] = useState(false);
   
@@ -55,76 +57,82 @@ export function DirectivesPanel({
     <>
       <Card className="shadow-sm flex-none">
         <CardHeader className="pb-2 border-b">
-          <div className="flex justify-between items-center gap-2">
-            <div className="flex-1">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Search className="w-4 h-4 text-primary" />
-                Investigation Directives
-              </CardTitle>
-            </div>
-            
-            {/* 紧凑的时间范围和 Alert 选择器 */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Alert 选择器 */}
-              {incidentData && incidentData.alerts?.length > 1 && (
-                <div className="flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3 text-amber-500" />
-                  <Select value={selectedAlertIdx} onValueChange={onAlertChange}>
-                    <SelectTrigger className="h-7 text-xs w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {incidentData.alerts.map((al: any, idx: number) => {
-                        const t = al.created_at || al.CreatedAt || al._time;
-                        return (
-                          <SelectItem key={idx} value={String(idx)} className="text-xs font-mono">
-                            #{al.id}
-                          </SelectItem>
-                        )
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              
-              {/* 时间范围选择器 */}
-              {onTimeRangeChange && (
-                <div className="flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-muted-foreground" />
-                  <Select value={String(timeRangeHours)} onValueChange={(v) => onTimeRangeChange(Number(v))}>
-                    <SelectTrigger className="h-7 text-xs w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">Unlimited</SelectItem>
-                      <SelectItem value="1">±1 hour</SelectItem>
-                      <SelectItem value="2">±2 hours</SelectItem>
-                      <SelectItem value="6">±6 hours</SelectItem>
-                      <SelectItem value="12">±12 hours</SelectItem>
-                      <SelectItem value="24">±24 hours</SelectItem>
-                      <SelectItem value="72">±3 days</SelectItem>
-                      <SelectItem value="168">±7 days</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={onApplyTimeRange}>
-                    Apply
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Search className="w-4 h-4 text-primary" />
+            Investigation Directives
+          </CardTitle>
         </CardHeader>
         
         <CardContent className="p-3 bg-muted/30">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-wrap justify-between items-center gap-2">
+            {/* 左侧：Incident 和 Alert 选择器 */}
             <div className="flex items-center gap-2">
+              {/* Incident 选择器 */}
+              {incidentData && (
+                <Select 
+                  value={String(incidentData.ID || incidentData.id)} 
+                  onValueChange={(val) => onIncidentChange?.(val)}
+                  disabled={!onIncidentChange}
+                >
+                  <SelectTrigger className="h-8 text-xs w-32">
+                    <SelectValue placeholder="Select Incident" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={String(incidentData.ID || incidentData.id)} className="text-xs">
+                      Incident #{incidentData.ID || incidentData.id}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              
+              {/* Alert 选择器 */}
+              {incidentData && incidentData.alerts?.length > 1 && (
+                <Select value={selectedAlertIdx} onValueChange={onAlertChange}>
+                  <SelectTrigger className="h-8 text-xs w-24">
+                    <SelectValue placeholder="Alert" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {incidentData.alerts.map((al: any, idx: number) => (
+                      <SelectItem key={idx} value={String(idx)} className="text-xs font-mono">
+                        #{al.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            
+            {/* 右侧：时间范围选择器 + 操作按钮 */}
+            <div className="flex items-center gap-2">
+              {/* 时间范围选择器 */}
+              {onTimeRangeChange && (
+                <Select value={String(timeRangeHours)} onValueChange={(v) => {
+                  onTimeRangeChange(Number(v));
+                  onApplyTimeRange?.();
+                }}>
+                  <SelectTrigger className="h-8 text-xs w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Unlimited</SelectItem>
+                    <SelectItem value="1">±1 hour</SelectItem>
+                    <SelectItem value="2">±2 hours</SelectItem>
+                    <SelectItem value="6">±6 hours</SelectItem>
+                    <SelectItem value="12">±12 hours</SelectItem>
+                    <SelectItem value="24">±24 hours</SelectItem>
+                    <SelectItem value="72">±3 days</SelectItem>
+                    <SelectItem value="168">±7 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              
               <Button variant="outline" size="sm" onClick={() => setSelectorOpen(true)}>
                 <LayoutList className="w-4 h-4 mr-2" /> Select
               </Button>
               <Button variant="outline" size="sm" title="Refresh Rules" onClick={handleRefresh}>
                 <ExternalLink className="w-4 h-4 mr-1" /> Refresh
               </Button>
-              <Button onClick={onExecute} disabled={loading || selectedTemplates.length === 0} className="shadow-sm ml-2">
+              <Button onClick={onExecute} disabled={loading || selectedTemplates.length === 0} className="shadow-sm">
                 {loading ? <Activity className="w-4 h-4 mr-2 animate-spin" /> : <Activity className="w-4 h-4 mr-2" />}
                 Execute ({selectedTemplates.length})
               </Button>
