@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Target, Server, FlaskConical, Clock } from "lucide-react";
+import { Plus, Trash2, Target, Server, FlaskConical } from "lucide-react";
 
 interface ContextPanelProps {
   activeIncidentId: string | null | undefined;
@@ -15,10 +14,6 @@ interface ContextPanelProps {
   setNewVarValue: (val: string) => void;
   handleAddVar: () => void;
   handleRemoveVar: (key: string) => void;
-  // 时间范围配置
-  timeRangeHours: number;
-  onTimeRangeChange: (hours: number) => void;
-  onApplyTimeRange: () => void;
   // 取证上下文
   forensicsCaseId?: number;
   forensicsFileId?: number;
@@ -34,9 +29,6 @@ export function ContextPanel({
   setNewVarValue,
   handleAddVar,
   handleRemoveVar,
-  timeRangeHours,
-  onTimeRangeChange,
-  onApplyTimeRange,
   forensicsCaseId,
   forensicsFileId,
   forensicsFileName
@@ -49,29 +41,6 @@ export function ContextPanel({
             <Target className="w-4 h-4 text-primary" />
             Investigation Context
           </CardTitle>
-          
-          {/* 时间范围选择器 */}
-          <div className="flex items-center gap-2 mt-2">
-            <Clock className="w-3 h-3 text-muted-foreground" />
-            <Select value={String(timeRangeHours)} onValueChange={(v) => onTimeRangeChange(Number(v))}>
-              <SelectTrigger className="h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">Unlimited</SelectItem>
-                <SelectItem value="1">±1 hour</SelectItem>
-                <SelectItem value="2">±2 hours</SelectItem>
-                <SelectItem value="6">±6 hours</SelectItem>
-                <SelectItem value="12">±12 hours</SelectItem>
-                <SelectItem value="24">±24 hours</SelectItem>
-                <SelectItem value="72">±3 days</SelectItem>
-                <SelectItem value="168">±7 days</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onApplyTimeRange}>
-              Apply
-            </Button>
-          </div>
           
           <CardDescription className="text-xs">
             {/* 显示来源：Alert 或 Forensics */}

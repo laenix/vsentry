@@ -293,35 +293,10 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
   // ==================== ViewRender ====================
 
   return (
-    <div className="p-6 h-full flex flex-col md:flex-row gap-6">
+    <div className="p-4 h-full flex flex-col md:flex-row gap-4">
       
-      {/* 左侧区域：源头Select器 + 情报Panel */}
-      <div className="w-full md:w-80 flex flex-col gap-4 flex-none">
-        
-        {/* Alert 切换器 (仅在有多个Alert时显示) */}
-        {incidentData && incidentData.alerts?.length > 1 && (
-          <div className="bg-card border rounded-lg p-3 shadow-sm flex flex-col gap-2 border-l-4 border-l-blue-500">
-            <Label className="text-xs text-muted-foreground flex justify-between">
-              <span>Select Context Source</span>
-              <Badge variant="secondary" className="text-[10px]">{incidentData.alerts.length} Alerts</Badge>
-            </Label>
-            <Select value={selectedAlertIdx} onValueChange={handleAlertChange}>
-              <SelectTrigger className="h-8 text-xs font-mono">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {incidentData.alerts.map((al: any, idx: number) => {
-                  const t = al.created_at || al.CreatedAt || al._time;
-                  return (
-                    <SelectItem key={idx} value={String(idx)} className="text-xs font-mono">
-                      #{al.id} - {t ? new Date(t).toLocaleTimeString() : 'Unknown'}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+      {/* 左侧区域：情报Panel */}
+      <div className="w-full md:w-72 flex flex-col gap-2 flex-none overflow-hidden">
         
         <ContextPanel 
           activeIncidentId={activeIncidentId}
@@ -332,12 +307,6 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
           setNewVarValue={setNewVarValue}
           handleAddVar={handleAddVar}
           handleRemoveVar={handleRemoveVar}
-          timeRangeHours={timeRangeHours}
-          onTimeRangeChange={setTimeRangeHours}
-          onApplyTimeRange={() => {
-            if (incidentData) applyAlertContext(incidentData, parseInt(selectedAlertIdx));
-            else if (forensicsData) loadForensicsContext(forensicsCaseId!, forensicsFileId);
-          }}
           forensicsCaseId={forensicsCaseId}
           forensicsFileId={forensicsFileId}
           forensicsFileName={forensicsData?.files?.find((f: any) => f.id === forensicsFileId)?.original_name}
@@ -349,11 +318,20 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
         <DirectivesPanel 
           templates={templates}
           selectedTemplates={selectedTemplates}
-          onChangeSelection={setSelectedTemplates} // 传递选Medium的Template ID 数Group
+          onChangeSelection={setSelectedTemplates}
           contextVars={contextVars}
           loading={loading}
           onExecute={handleExecuteInvestigation}
           onRefreshTemplates={fetchTemplates}
+          timeRangeHours={timeRangeHours}
+          onTimeRangeChange={setTimeRangeHours}
+          onApplyTimeRange={() => {
+            if (incidentData) applyAlertContext(incidentData, parseInt(selectedAlertIdx));
+            else if (forensicsData) loadForensicsContext(forensicsCaseId!, forensicsFileId);
+          }}
+          incidentData={incidentData}
+          selectedAlertIdx={selectedAlertIdx}
+          onAlertChange={handleAlertChange}
         />
         <TimelinePanel 
           mergedEvents={mergedEvents} 
