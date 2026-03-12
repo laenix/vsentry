@@ -22,20 +22,31 @@ function TimelineItem({ event, onOpenInLogs }: TimelineItemProps) {
   // 安全解析时间 - 尝试多个可能的字段
   const timeFields = ['_time', 'time', 'timestamp', 'event_time', '@timestamp', 'datetime', 'ts'];
   let eventTime = '';
+  let timeObj: Date;
+  let isValidTime = false;
+  
   for (const field of timeFields) {
     if (event[field]) {
       eventTime = String(event[field]);
-      break;
+      // 检查是否是 Unix 时间戳（数字字符串，如 "1760615983.84413"）
+      if (/^\d+(\.\d+)?$/.test(eventTime)) {
+        // Unix 时间戳可能是秒或毫秒
+        const timestamp = parseFloat(eventTime);
+        // 如果大于 1e11，说明是毫秒级时间戳
+        timeObj = new Date(timestamp > 1e11 ? timestamp : timestamp * 1000);
+      } else {
+        timeObj = new Date(eventTime);
+      }
+      isValidTime = !isNaN(timeObj.getTime());
+      if (isValidTime) break;
     }
   }
-  // 如果都没找到，用当前时间
-  if (!eventTime) {
-    eventTime = new Date().toISOString();
-  }
-  const timeObj = new Date(eventTime);
-  const isValidTime = !isNaN(timeObj.getTime());
   
-  // Debug: 可以通过 console.log(event) 查看实际数据结构
+  // 如果都没找到，用当前时间
+  if (!isValidTime) {
+    timeObj = new Date();
+    isValidTime = true;
+  }
   
   const eventAction = event.activity_name || event.action || event.event_type;
   const severity = event.severity || "info";
@@ -142,11 +153,27 @@ function TimelineItem({ event, onOpenInLogs }: TimelineItemProps) {
 }
 
 export function TimelinePanel({ mergedEvents, onOpenInLogs }: TimelinePanelProps) {
+  // 解析时间戳的辅助函数
+  const parseEventTime = (ev: MergedEvent): number => {
+    const timeFields = ['_time', 'time', 'timestamp', 'event_time', '@timestamp', 'datetime', 'ts'];
+    for (const field of timeFields) {
+      if (ev[field]) {
+        const val = String(ev[field]);
+        // 检查是否是 Unix 时间戳
+        if (/^\d+(\.\d+)?$/.test(val)) {
+          const timestamp = parseFloat(val);
+          return timestamp > 1e11 ? timestamp : timestamp * 1000;
+        }
+        const date = new Date(val).getTime();
+        if (!isNaN(date)) return date;
+      }
+    }
+    return 0;
+  };
+
   // 按时间排序
   const sortedEvents = [...mergedEvents].sort((a, b) => {
-    const timeA = new Date(a._time || a.time || a.timestamp || 0).getTime();
-    const timeB = new Date(b._time || b.time || b.timestamp || 0).getTime();
-    return timeB - timeA;
+    return parseEventTime(b) - parseEventTime(a);
   });
 
   return (
