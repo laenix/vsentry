@@ -23,7 +23,7 @@ export default function EditPlaybookPage() {
       setLoading(true);
       try {
         if (id === 'new') {
-          // 新建模式：给一个默认的 Trigger 节点
+          //   New建模式：给一个默认的 Trigger Node
           setPlaybookData({
             id: 'new',
             name: "New Playbook",
@@ -36,7 +36,7 @@ export default function EditPlaybookPage() {
             edges: []
           });
         } else {
-          // 编辑模式：从后端拉取真实数据
+          //   Edit模式：从后端拉取真实Data
           const res = await automationService.getDetail(id!);
           if (res.code === 200 && res.data) {
             const def = res.data.definition || { nodes: [], edges: [] };
@@ -75,8 +75,7 @@ export default function EditPlaybookPage() {
   return (
     <div className="h-screen w-full bg-background">
       <PlaybookEditor 
-        playbookId={playbookData.id} // 传入 ID
-        playbookName={playbookData.name}
+        playbookId={playbookData.id} // 传入 - playbookName={playbookData.name}
         initialNodes={playbookData.nodes}
         initialEdges={playbookData.edges}
         onBack={() => navigate('/automation')} 

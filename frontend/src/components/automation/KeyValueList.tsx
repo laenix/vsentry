@@ -16,14 +16,13 @@ interface KeyValueListProps {
 }
 
 export function KeyValueList({ items, onChange, keyPlaceholder = "Key", valuePlaceholder = "Value" }: KeyValueListProps) {
-  // 将 Object 转为 Array 进行编辑
+  // 将 - 转为 Array 进行Edit
   const entries = Object.entries(items).map(([key, value]) => ({ key, value }));
 
   const handleChange = (index: number, field: 'key' | 'value', newValue: string) => {
     const newEntries = [...entries];
     newEntries[index][field] = newValue;
-    // 转回 Object
-    const newObj = newEntries.reduce((acc, curr) => {
+    // 转回 - const newObj = newEntries.reduce((acc, curr) => {
       if (curr.key) acc[curr.key] = curr.value;
       return acc;
     }, {} as Record<string, string>);
@@ -40,28 +39,26 @@ export function KeyValueList({ items, onChange, keyPlaceholder = "Key", valuePla
   };
 
   const handleAdd = () => {
-    // 添加一个临时唯一的 Key 防止 React Key 冲突，实际保存时会过滤空 Key
+    // Add一个临时唯一的 - 防止 React Key 冲突，实际Save时会Filter空 Key
     const newEntries = [...entries, { key: '', value: '' }];
-    // 这里不需要立即 onChange，等用户输入 Key 之后再生效，避免产生空 Key
-    // 但为了 UI 渲染，我们需要维护一个本地状态，或者在这里简单处理：
-    // 简单起见，这里我们不立即写回 onChange，而是依赖上面的 handleChange
-    // 但为了让 UI 刷出来，我们需要 hack 一下：
-    // 实际项目中建议使用 useLocalState 管理 array，最后 useEffect 同步回 object
-    // 这里简化处理：允许暂时有空 key 的对象传递（注意：Object key 不能重复为空）
-    // 为了稳健，KeyValueList 最好内部维护 Array state。
+    // 这里不Need立即 - ，等UserInput Key 之后再生效，避免产生空 Key
+    // 但为了 - 渲染，我们Need维护一个本地Status，或者在这里简单Handle：
+    //   简单起见，这里我们不立即写回 onChange，而是依赖上面的 handleChange
+    // 但为了让 - 刷出来，我们Need hack 一下：
+    // 实际项目Medium建议使用 - Manage array，最后 useEffect Sync回 object
+    //   这里简化Handle：Allow暂时有空 key 的对象传递（注意：Object key Cannot重复为空）
+    //   为了稳健，KeyValueList 最好内部维护 Array state。
   };
   
-  // 简化版：我们直接渲染 items + 一个空行
+  //   简化版：我们直接渲染 items + 一个空行
   const renderRows = [...entries, { key: '', value: '', isNew: true }];
 
   const handleRowChange = (index: number, key: string, value: string) => {
      const newEntries = [...entries];
      if (index === entries.length) {
-        // 新增行
-        newEntries.push({ key, value });
+        // New增行 - .push({ key, value });
      } else {
-        // 修改行
-        newEntries[index] = { key, value };
+        // 修改行 - [index] = { key, value };
      }
      
      const newObj = newEntries.reduce((acc, curr) => {

@@ -8,17 +8,17 @@ import (
 	"github.com/laenix/vsentry/model"
 )
 
-// ListAlerts 获取告警列表
+// ListAlerts - Get alert list
 func ListAlerts(ctx *gin.Context) {
 	var alerts []model.Alert
 	database.GetDB().Order("id desc").Find(&alerts)
 	ctx.JSON(http.StatusOK, gin.H{"code": 200, "data": alerts, "msg": "success"})
 }
 
-// Acknowledge 认领告警
+// Acknowledge - Acknowledge an alert
 func Acknowledge(ctx *gin.Context) {
 	id := ctx.Query("id")
-	userID, _ := ctx.Get("userid") // 从 AuthMiddleware 获取
+	userID, _ := ctx.Get("userid")
 
 	db := database.GetDB()
 	err := db.Model(&model.Alert{}).Where("id = ?", id).Updates(map[string]interface{}{
@@ -27,13 +27,13 @@ func Acknowledge(ctx *gin.Context) {
 	}).Error
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "认领失败"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Failed to acknowledge"})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "已成功认领"})
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Alert acknowledged"})
 }
 
-// Resolve 解决并关闭告警
+// Resolve - Resolve and close an alert
 func Resolve(ctx *gin.Context) {
 	var req struct {
 		ID             uint   `json:"id"`
@@ -41,7 +41,7 @@ func Resolve(ctx *gin.Context) {
 		Comment        string `json:"comment"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid parameter"})
 		return
 	}
 
@@ -53,33 +53,32 @@ func Resolve(ctx *gin.Context) {
 	}).Error
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "关闭失败"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Failed to close"})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "告警已解决"})
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Alert resolved"})
 }
 
-// Assign 转交或指派告警
+// Assign - Assign or transfer an alert
 func Assign(ctx *gin.Context) {
 	var req struct {
 		ID     uint `json:"id"`
 		UserID uint `json:"user_id"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid parameter"})
 		return
 	}
 
 	db := database.GetDB()
-	// 更新逻辑：设置受理人，如果原状态是 new 则自动转为 acknowledged
 	err := db.Model(&model.Alert{}).Where("id = ?", req.ID).Updates(map[string]interface{}{
 		"assignee": req.UserID,
 		"status":   "acknowledged",
 	}).Error
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "指派失败"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Failed to assign"})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "指派成功"})
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Alert assigned"})
 }

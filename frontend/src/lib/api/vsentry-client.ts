@@ -1,7 +1,7 @@
 import axios from "axios";
 import { toast } from "sonner";
 
-// 1. 配置 Base URL
+//   1. Config Base URL
 const API_BASE_URL = "/api";
 
 export const apiClient = axios.create({
@@ -9,7 +9,7 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
-// 2. 请求拦截器：自动携带 Token
+//   2. Request拦截器：自动携带 Token
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("vsentry_token");
   if (token) {
@@ -18,23 +18,23 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// 3. 响应拦截器：统一处理错误
+//   3. Response拦截器：统一HandleError
 apiClient.interceptors.response.use(
   (response) => {
-    // 假设后端返回 {code: 200, data: ..., msg: ...}
-    // 如果 code 不是 200，视为业务错误
+    //   假设后端Return {code: 200, data: ..., msg: ...}
+    // 如果 - 不是 200，视为业务Error
     if (response.data && response.data.code !== 200) {
       toast.error(`Error ${response.data.code}: ${response.data.msg}`);
       return Promise.reject(new Error(response.data.msg));
     }
-    return response.data; // 直接返回 data 包装层，或者 response.data.data
+    return response.data; // 直接Return - 包装层，或者 response.data.data
   },
   (error) => {
-    // 处理 HTTP 状态码错误 (401, 500 等)
+    // Handle - Status码Error (401, 500 等)
     if (error.response?.status === 401) {
       toast.error("Session expired. Please login again.");
       localStorage.removeItem("vsentry_token");
-      window.location.href = "/login"; // 强制跳转登录
+      window.location.href = "/login"; //   强制跳转Login
     } else {
       toast.error(error.message || "Network Error");
     }
@@ -42,8 +42,7 @@ apiClient.interceptors.response.use(
   }
 );
 
-// 定义通用响应结构
-export interface APIResponse<T = any> {
+// 定义通用Response结构 - interface APIResponse<T = any> {
   code: number;
   data: T;
   msg: string;

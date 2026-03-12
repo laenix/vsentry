@@ -5,10 +5,10 @@ import (
 )
 
 func init() {
-	// 4768: Kerberos TGT 请求 (登录域)
-	// 4769: Kerberos 服务票据请求 (访问域内资源)
-	// 4771: Kerberos 预认证失败 (密码错误/爆破)
-	// 4776: NTLM 凭据验证 (哈希传递攻击)
+	//   4768: Kerberos TGT Request (Login域)
+	//   4769: Kerberos Service票据Request (访问域内资源)
+	//   4771: Kerberos 预AuthFailed (PasswordError/爆破)
+	//   4776: NTLM 凭据Validate (哈希传递攻击)
 	Register([]int{4768, 4769, 4771, 4776}, mapKerberosEvents)
 }
 
@@ -19,20 +19,16 @@ func mapKerberosEvents(unmapped map[string]interface{}, entry *ocsf.VSentryOCSFE
 
 	eventID := entry.Unmapped["event_id"].(int)
 
-	// IP 地址在不同事件里字段名不同
-	ip := GetStr(unmapped, "IpAddress")
+	// IP - ip := GetStr(unmapped, "IpAddress")
 	if ip == "" {
-		ip = GetStr(unmapped, "Workstation") // 4776 专属
-	}
+		ip = GetStr(unmapped, "Workstation") // 4776 - }
 	if ip != "" && ip != "-" {
 		entry.SrcEndpoint = &ocsf.Endpoint{IP: ip}
 	}
 
-	// 被请求的用户
-	userName := GetStr(unmapped, "TargetUserName")
+	// 被Request的User - := GetStr(unmapped, "TargetUserName")
 	if userName == "" {
-		userName = GetStr(unmapped, "TargetAccountName") // 4776 专属
-	}
+		userName = GetStr(unmapped, "TargetAccountName") // 4776 - }
 	entry.TargetUser = &ocsf.User{Name: userName}
 
 	switch eventID {
@@ -54,14 +50,13 @@ func mapKerberosEvents(unmapped map[string]interface{}, entry *ocsf.VSentryOCSFE
 		entry.Unmapped["service_name"] = GetStr(unmapped, "ServiceName")
 
 	case 4771:
-		entry.ActivityName = ocsf.ActionLogonFailed // 预认证失败通常意味着密码错误或域账号爆破
-		entry.Severity = ocsf.SeverityMedium
+		entry.ActivityName = ocsf.ActionLogonFailed // 预AuthFailed通常意味着PasswordError或域账号爆破 - .Severity = ocsf.SeverityMedium
 		entry.SeverityID = ocsf.SeverityIDMedium
 		entry.Unmapped["failure_code"] = GetStr(unmapped, "Status")
 
 	case 4776:
 		entry.ActivityName = "NTLM Credential Validation"
-		status := GetStr(unmapped, "Status") // 0x0 成功, 0xC000006A 密码错误
+		status := GetStr(unmapped, "Status") // 0x0 - , 0xC000006A PasswordError
 		if status == "0x0" {
 			entry.Severity = ocsf.SeverityInfo
 			entry.SeverityID = ocsf.SeverityIDInfo

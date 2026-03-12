@@ -1,8 +1,7 @@
 import * as monaco from 'monaco-editor';
 import { registerExprLanguage } from './expr-lang';
 
-// expr 常用内置函数列表
-const EXPR_FUNCTIONS = [
+// expr - const EXPR_FUNCTIONS = [
   { label: 'len', insertText: 'len($1)', detail: 'Returns the length of array or string', insertTextRules: 4 },
   { label: 'sprintf', insertText: 'sprintf("%s", $1)', detail: 'Format string using placeholders', insertTextRules: 4 },
   { label: 'contains', insertText: 'contains($1, "$2")', detail: 'Check if string contains substring', insertTextRules: 4 },
@@ -12,16 +11,16 @@ const EXPR_FUNCTIONS = [
 ];
 
 /**
- * 注册 Automation 表达式自动补全
- * @param monacoInstance Monaco 实例
- * @param contextData 动态上下文数据 (来自 Test Run 的 PlaybookExecution.logs)
+ * 注册 Automation Expression自动补全
+ * @param monacoInstance Monaco Instance
+ * @param contextData 动态上下文Data (来自 Test Run 的 PlaybookExecution.logs)
  */
 export const registerAutomationCompletion = (
   monacoInstance: typeof monaco,
   contextData?: Record<string, any>
 ): monaco.IDisposable => {
 
-  // 1. 注册语言高亮定义 (如标识符颜色、操作符等)
+  //   1. 注册语言High亮定义 (如标识符颜色、操作符等)
   registerExprLanguage(monacoInstance);
 
   const langId = 'expr'; 
@@ -45,7 +44,7 @@ export const registerAutomationCompletion = (
         endColumn: position.column,
       });
 
-      // --- 场景 1: 顶层关键字 (incident, steps, functions) ---
+      //   --- 场景 1: 顶层关键字 (incident, steps, functions) ---
       if (!textUntilPosition.includes('.')) {
         const keywords = [
           {
@@ -73,11 +72,11 @@ export const registerAutomationCompletion = (
         return { suggestions: [...keywords, ...functions] };
       }
 
-      // --- 场景 2: 动态属性补全 ---
+      //   --- 场景 2: 动态属性补全 ---
 
-      // 2.1 Incident 补全：映射到 ID 为 "1" 的节点或第一个节点
+      //   2.1 Incident 补全：映射到 ID 为 "1" 的Node或第一个Node
       if (textUntilPosition.endsWith('incident.')) {
-        // 自动识别触发器节点：优先找 ID "trigger"，否则找 logs 里的首个 key
+        //   自动识别触发器Node：优先找 ID "trigger"，否则找 logs 里的首个 key
         const triggerKey = contextData ? (Object.keys(contextData).find(k => k === "trigger" || !k.includes('_')) || "trigger") : "trigger";
         const triggerOutput = contextData?.[triggerKey]?.output;
         
@@ -93,7 +92,7 @@ export const registerAutomationCompletion = (
           };
         }
 
-        // 默认静态提示 (如果 Test Run 尚未执行)
+        //   默认静态提示 (如果 Test Run 尚未Execute)
         return {
           suggestions: [
             { label: 'id', kind: monacoInstance.languages.CompletionItemKind.Field, insertText: 'id', range },
@@ -103,27 +102,27 @@ export const registerAutomationCompletion = (
         };
       }
 
-      // 2.2 Steps 动态补全 (核心：深度探测 JSON 结构)
+      //   2.2 Steps 动态补全 (核心：深度探测 JSON 结构)
       if (textUntilPosition.startsWith('steps.')) {
         const pathString = textUntilPosition.slice(6); 
         const parts = pathString.split('.');
         const isTriggeredByDot = textUntilPosition.endsWith('.');
         
-        // 2.2.1 提示 Node ID
+        //   2.2.1 提示 Node ID
         if (parts.length === 1 && !isTriggeredByDot) {
           const nodeIds = contextData ? Object.keys(contextData) : [];
           return {
             suggestions: nodeIds.map(nodeId => ({
               label: nodeId,
               kind: monacoInstance.languages.CompletionItemKind.Class,
-              insertText: nodeId, // ✅ 如果后端改成了字母 ID，这里会自动适配
+              insertText: nodeId, //   ✅ 如果后端改成了字母 ID，这里会自动适配
               detail: `Execution Status: ${contextData?.[nodeId]?.status}`,
               range
             }))
           };
         }
 
-        // 2.2.2 提示子属性 (output, body, etc.)
+        //   2.2.2 提示子属性 (output, body, etc.)
         if (contextData) {
           const pathParts = isTriggeredByDot ? parts.slice(0, -1) : parts.slice(0, -1);
           let currentObj: any = contextData;

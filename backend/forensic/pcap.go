@@ -51,20 +51,13 @@ type ForensicEventJSON struct {
 	DNSRCode     string   `json:"dns_rcode,omitempty"`
 	DNSQueries   []string `json:"dns_queries,omitempty"`
 	DNSAnswers   []string `json:"dns_answers,omitempty"`
-	// USB 相关
-	USBEventType string `json:"usb_event_type,omitempty"` // keyboard, mouse, storage
-	USBKeyPress  string `json:"usb_keypress,omitempty"`   // 键盘按键
-	USBMouseMove string `json:"usb_mouse_move,omitempty"` // 鼠标移动
-	// WiFi 相关
-	WiFiFrameType string `json:"wifi_frame_type,omitempty"` // beacon, data, control
-	WiFiSSID      string `json:"wifi_ssid,omitempty"`       // SSID
-	WiFiBSSID     string `json:"wifi_bssid,omitempty"`      // AP MAC
-	WiFiChannel   int    `json:"wifi_channel,omitempty"`
+	// USB - USBEventType string `json:"usb_event_type,omitempty"` //   keyboard, mouse, storage
+	USBKeyPress  string `json:"usb_keypress,omitempty"`   // 键盘按键 - string `json:"usb_mouse_move,omitempty"` //   鼠标移动
+	// WiFi - WiFiFrameType string `json:"wifi_frame_type,omitempty"` //   beacon, data, control
+	WiFiSSID      string `json:"wifi_ssid,omitempty"`       // SSID - string `json:"wifi_bssid,omitempty"`      // AP - WiFiChannel   int    `json:"wifi_channel,omitempty"`
 	WiFiSignal    int    `json:"wifi_signal_dbm,omitempty"`
-	// EAPOL
-	EAPOLType string `json:"eapol_type,omitempty"` // 1=Request, 2=Response, 3=Success, 4=Fail
-	EAPOLKey  string `json:"eapol_key,omitempty"`  // Key信息
-	Tags      string `json:"tags,omitempty"`
+	// EAPOL - string `json:"eapol_type,omitempty"` //   1=Request, 2=Response, 3=Success, 4=Fail
+	EAPOLKey  string `json:"eapol_key,omitempty"`  // KeyInfo - string `json:"tags,omitempty"`
 }
 
 func (p *PCAPParser) Parse(filePath string) ([]ForensicEvent, error) {
@@ -89,7 +82,7 @@ func (p *PCAPParser) Parse(filePath string) ([]ForensicEvent, error) {
 	streamStartTimes := make(map[string]time.Time)
 	var timeMu sync.RWMutex
 
-	// USB 键盘映射表 (HID Usage Table)
+	// USB - (HID Usage Table)
 	usbKeyMap := map[uint8]string{
 		0x04: "a", 0x05: "b", 0x06: "c", 0x07: "d", 0x08: "e",
 		0x09: "f", 0x0A: "g", 0x0B: "h", 0x0C: "i", 0x0D: "j",
@@ -150,7 +143,7 @@ func (p *PCAPParser) Parse(filePath string) ([]ForensicEvent, error) {
 		transLayer := packet.TransportLayer()
 		ts := packet.Metadata().Timestamp
 
-		// WiFi 802.11 处理
+		// WiFi - .11 Handle
 		if wifiLayer := packet.Layer(layers.LayerTypeDot11); wifiLayer != nil {
 			wifi, _ := wifiLayer.(*layers.Dot11)
 			ev := parseWiFiFrame(wifi, ts)
@@ -160,7 +153,7 @@ func (p *PCAPParser) Parse(filePath string) ([]ForensicEvent, error) {
 			continue
 		}
 
-		// EAPOL (WiFi 握手) 处理
+		//   EAPOL (WiFi 握手) Handle
 		if eapolLayer := packet.Layer(layers.LayerTypeEAPOL); eapolLayer != nil {
 			eapol, _ := eapolLayer.(*layers.EAPOL)
 			ev := parseEAPOL(eapol, ts)
@@ -170,8 +163,7 @@ func (p *PCAPParser) Parse(filePath string) ([]ForensicEvent, error) {
 			continue
 		}
 
-		// USB 处理
-		if usbLayer := packet.Layer(layers.LayerTypeUSB); usbLayer != nil {
+		// USB - if usbLayer := packet.Layer(layers.LayerTypeUSB); usbLayer != nil {
 			usb, _ := usbLayer.(*layers.USB)
 			ev := parseUSB(usb, ts, usbKeyMap)
 			if ev.Protocol != "" {
@@ -274,8 +266,7 @@ func (p *PCAPParser) Parse(filePath string) ([]ForensicEvent, error) {
 			eventChan <- ev
 		}
 
-		// ICMP
-		if icmpLayer := packet.Layer(layers.LayerTypeICMPv4); icmpLayer != nil {
+		// ICMP - icmpLayer := packet.Layer(layers.LayerTypeICMPv4); icmpLayer != nil {
 			icmp, _ := icmpLayer.(*layers.ICMPv4)
 			ev := ForensicEventJSON{
 				Timestamp:    float64(ts.UnixNano()) / 1e9,
@@ -301,7 +292,7 @@ func (p *PCAPParser) Parse(filePath string) ([]ForensicEvent, error) {
 	return events, nil
 }
 
-// parseWiFi 解析 802.11 WiFi 帧
+// parseWiFi - 802.11 WiFi 帧
 func parseWiFiFrame(wifi *layers.Dot11, ts time.Time) ForensicEventJSON {
 	ev := ForensicEventJSON{
 		Timestamp:    float64(ts.UnixNano()) / 1e9,
@@ -310,14 +301,13 @@ func parseWiFiFrame(wifi *layers.Dot11, ts time.Time) ForensicEventJSON {
 		Protocol:     "WIFI",
 	}
 
-	// 通过类型和子类型字符串判断
-	typeStr := wifi.Type.String()
+	// 通过TypeSum子Type字符串判断 - := wifi.Type.String()
 	ev.WiFiFrameType = typeStr
 	
 	ev.Tags = "wifi"
 	if strings.Contains(typeStr, "Beacon") {
 		ev.Tags = "wifi_beacon"
-		// 从 Payload 提取 SSID
+		// 从 - 提取 SSID
 		if len(wifi.Payload) > 2 && wifi.Payload[0] == 0x00 {
 			ssidLen := int(wifi.Payload[1])
 			if ssidLen > 0 && ssidLen <= 32 && len(wifi.Payload) >= ssidLen+2 {
@@ -334,13 +324,12 @@ func parseWiFiFrame(wifi *layers.Dot11, ts time.Time) ForensicEventJSON {
 		ev.Tags = "wifi_data"
 	}
 
-	// BSSID
-	ev.WiFiBSSID = wifi.Address3.String()
+	// BSSID - .WiFiBSSID = wifi.Address3.String()
 
 	return ev
 }
 
-// parseEAPOL 解析 EAPOL 握手包
+// parseEAPOL - EAPOL 握手包
 func parseEAPOL(eapol *layers.EAPOL, ts time.Time) ForensicEventJSON {
 	ev := ForensicEventJSON{
 		Timestamp:    float64(ts.UnixNano()) / 1e9,
@@ -368,7 +357,7 @@ func parseEAPOL(eapol *layers.EAPOL, ts time.Time) ForensicEventJSON {
 	return ev
 }
 
-// parseUSB 解析 USB 流量
+// parseUSB - USB 流量
 func parseUSB(usb *layers.USB, ts time.Time, keyMap map[uint8]string) ForensicEventJSON {
 	ev := ForensicEventJSON{
 		Timestamp:    float64(ts.UnixNano()) / 1e9,
@@ -377,11 +366,11 @@ func parseUSB(usb *layers.USB, ts time.Time, keyMap map[uint8]string) ForensicEv
 		Protocol:     "USB",
 	}
 
-	// 通过 payload 长度判断类型
+	// 通过 - 长度判断Type
 	ev.USBEventType = "unknown"
 	ev.Tags = "usb"
 
-	// HID 键盘数据检测 (payload 长度通常 >= 8)
+	// HID - (payload 长度通常 >= 8)
 	if len(usb.Payload) >= 8 {
 		modifier := usb.Payload[0]
 		keyCode := usb.Payload[2]
@@ -398,8 +387,7 @@ func parseUSB(usb *layers.USB, ts time.Time, keyMap map[uint8]string) ForensicEv
 			}
 		}
 
-		// 鼠标
-		if len(usb.Payload) >= 4 {
+		// 鼠标 - len(usb.Payload) >= 4 {
 			x := int8(usb.Payload[1])
 			y := int8(usb.Payload[2])
 			if x != 0 || y != 0 {
@@ -410,8 +398,7 @@ func parseUSB(usb *layers.USB, ts time.Time, keyMap map[uint8]string) ForensicEv
 		}
 	}
 
-	// 存储设备
-	if len(usb.Payload) >= 12 && (usb.Payload[0] == 0x28 || usb.Payload[0] == 0x2A) {
+	// Storage设备 - len(usb.Payload) >= 12 && (usb.Payload[0] == 0x28 || usb.Payload[0] == 0x2A) {
 		ev.USBEventType = "storage"
 		ev.Tags = "usb_storage"
 	}
@@ -420,7 +407,7 @@ func parseUSB(usb *layers.USB, ts time.Time, keyMap map[uint8]string) ForensicEv
 	return ev
 }
 
-// ========== 保留原有 TCP 流处理 ==========
+//   ========== 保留原有 TCP 流Handle ==========
 
 type pcapStreamFactory struct {
 	eventChan      chan ForensicEventJSON
@@ -477,7 +464,7 @@ func (f *pcapStreamFactory) handleStream(netFlow, transFlow gopacket.Flow, r io.
 	}
 }
 
-// 协议匹配器 (简化版，保留核心协议)
+//   Protocol匹配器 (简化版，保留核心Protocol)
 func (f *pcapStreamFactory) matchHTTP(srcPort, dstPort string, peek []byte) bool {
 	ports := map[string]bool{"80": true, "8080": true, "443": true, "8443": true, "7001": true}
 	return ports[srcPort] || ports[dstPort] || strings.HasPrefix(string(peek), "HTTP/")
@@ -527,7 +514,7 @@ func (f *pcapStreamFactory) matchIMAP(srcPort, dstPort string, peek []byte) bool
 	return srcPort == "143" || dstPort == "143" || srcPort == "993" || dstPort == "993"
 }
 
-// 协议解析器 (简化版)
+//   ProtocolParse器 (简化版)
 func (f *pcapStreamFactory) parseHTTP(netFlow, transFlow gopacket.Flow, reader io.Reader) {
 	ts := time.Now()
 	allData, _ := io.ReadAll(reader)

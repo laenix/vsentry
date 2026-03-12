@@ -19,7 +19,7 @@ interface DirectivesPanelProps {
 export function DirectivesPanel({ templates, selectedTemplates, onChangeSelection, contextVars, loading, onExecute, onRefreshTemplates }: DirectivesPanelProps) {
   const [selectorOpen, setSelectorOpen] = useState(false);
   
-  // 状态：用于触发刷新
+  //   Status：用于触发Refresh
   const [refreshKey, setRefreshKey] = useState(0);
 
   const selectedList = templates.filter(t => selectedTemplates.includes(t.id));

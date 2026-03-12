@@ -2,7 +2,7 @@ import { X, Activity } from "lucide-react"
 import { useTabStore } from "@/stores/tab-store"
 import { cn } from "@/lib/utils"
 
-// 1. 导入所有页面组件 (确保你已经在对应的 pages 目录下创建了 index.tsx)
+//   1. Import所有页面Group件 (确保你已经在对应的 pages Directory下Create了 index.tsx)
 import LogsPage from "@/pages/Logs"
 import DashboardPage from "@/pages/Dashboard"
 import ConnectorsPage from "@/pages/Connectors"
@@ -15,14 +15,14 @@ import CollectorsPage from "@/pages/Collectors"
 import CustomLogsPage from "@/pages/CustomLogs"
 import SettingsPage from "@/pages/Settings"
 
-// ✅ 新增导入 ForensicsPage
+//   ✅ New增Import ForensicsPage
 import ForensicsPage from "@/pages/Forensics"
 import ForensicInvestigationPage from "@/pages/Forensics/ForensicInvestigation"
 
 export function TabContent() {
   const { tabs, activeTabId, setActiveTab, removeTab } = useTabStore()
 
-  // 2. 根据 Tab 类型映射对应的页面组件
+  //   2. 根据 Tab Type映射对应的页面Group件
   const renderContent = (type: string, tabId: string, tabData: any) => {
     switch (type) {
       case 'dashboard':     return <DashboardPage />
@@ -75,7 +75,7 @@ export function TabContent() {
         ))}
       </div>
 
-      {/* 核心 Keep-Alive 容器 */}
+      {/* 核心 Keep-Alive Container */}
       <div className="flex-1 overflow-hidden relative">
         {tabs.map((tab) => (
           <div
@@ -90,7 +90,7 @@ export function TabContent() {
           </div>
         ))}
         
-        {/* 空状态 */}
+        {/* 空Status */}
         {tabs.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4 bg-muted/5">
              <div className="p-4 rounded-full bg-muted/20">

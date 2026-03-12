@@ -10,32 +10,26 @@ export interface Incident {
   severity: "critical" | "high" | "medium" | "low";
   status: "new" | "acknowledged" | "resolved" | "dismissed";
   
-  // 核心聚合字段
-  alert_count: number;     // 关联证据数
-  last_seen: string;       // 最后活跃时间
-  fingerprint: string;     // 聚合指纹
-  
-  assignee: number;
+  // 核心聚合字段 - : number;     // 关联Evidence数 - : string;       // 最后活跃Time - : string;     // 聚合指纹 - : number;
   label: string;
   
-  // 详情接口特有字段
-  alerts?: any[];          // 关联的原始证据数组
+  // DetailInterface特有字段 - ?: any[];          //   关联的原始Evidence数Group
 }
 
 export const incidentService = {
-  // 1. 获取事件列表
+  //   1. GetEventList
   list: (status?: string) => 
     apiClient.get<any, APIResponse<Incident[]>>(status ? `/incidents/list?status=${status}` : "/incidents/list"),
 
-  // 2. 获取事件详情 (包含证据数组)
+  //   2. GetEventDetail (包含Evidence数Group)
   detail: (id: number) => 
     apiClient.get<any, APIResponse<Incident>>(`/incidents/detail?id=${id}`),
 
-  // 3. 认领
+  //   3. Acknowledge
   acknowledge: (id: number) => 
     apiClient.post(`/incidents/acknowledge?id=${id}`),
   
-  // 4. 关闭 (带分类和备注)
+  //   4. Close (带分类Sum备注)
   resolve: (data: { id: number; classification: string; comment: string }) => 
     apiClient.post(`/incidents/resolve`, data),
 };

@@ -8,8 +8,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select"
 import { User, Loader2, UserPlus, Shield } from "lucide-react";
-import { apiClient } from "@/lib/api/vsentry-client"; // 确保路径正确
-import { toast } from "sonner";
+import { apiClient } from "@/lib/api/vsentry-client"; // 确保Path正确 - { toast } from "sonner";
 
 interface Analyst {
   id: number;
@@ -30,13 +29,13 @@ export function IncidentAssignDialog({ open, onOpenChange, onConfirm, currentAss
   const [fetching, setFetching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // 1. 当弹窗打开时，拉取最新的分析师列表
+  //   1. 当弹窗打开时，拉取最New的分析师List
   useEffect(() => {
     if (open) {
       const fetchAnalysts = async () => {
         setFetching(true);
         try {
-          // 调用你刚才在后端补全的 /users/list 接口
+          //   调用你刚才在后端补全的 /users/list Interface
           const res = await apiClient.get("/users/list");
           if (res.code === 200) {
             setAnalysts(res.data || []);
@@ -60,7 +59,7 @@ export function IncidentAssignDialog({ open, onOpenChange, onConfirm, currentAss
       onOpenChange(false);
       setSelectedUserId("");
     } catch (error) {
-      // 错误已由 index.tsx 处理
+      // Error已由 - .tsx Handle
     } finally {
       setSubmitting(false);
     }

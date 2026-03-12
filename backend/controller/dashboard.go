@@ -16,7 +16,7 @@ type DashboardStats struct {
 	TotalAlerts    int64            `json:"total_alerts"`
 	NewAlerts      int64            `json:"new_alerts"`
 	SeverityCounts map[string]int64 `json:"severity_counts"`
-	// 从 /metrics 提取的实时指标
+	//   从 /metrics 提取的实时指标
 	VLogsMetrics map[string]float64 `json:"vlogs_metrics"`
 }
 
@@ -25,13 +25,13 @@ func GetDashboard(ctx *gin.Context) {
 	var stats DashboardStats
 	stats.SeverityCounts = make(map[string]int64)
 
-	// 1. 内部告警统计
+	//   1. 内部Alert统计
 	db.Model(&model.Incident{}).Count(&stats.TotalAlerts)
 	var newIncidents int64
-	// 现在我们统计的是状态为 new 的安全事件 (Incident)
+	// 现在我们统计的是Status为 - 的SecurityEvent (Incident)
 	db.Model(&model.Incident{}).Where("status = ?", "new").Count(&newIncidents)
 
-	// 2. 获取并解析 VictoriaLogs 原始 Metrics
+	//   2. Get并Parse VictoriaLogs 原始 Metrics
 	stats.VLogsMetrics = fetchAndParseVLogsMetrics()
 
 	ctx.JSON(http.StatusOK, gin.H{
@@ -46,7 +46,7 @@ func fetchAndParseVLogsMetrics() map[string]float64 {
 
 	vLogsAddr := viper.GetString("victorialogs.url")
 	if vLogsAddr == "" {
-		vLogsAddr = "http://localhost:9428"
+		vLogsAddr = "http://  localhost:9428"
 	}
 
 	resp, err := http.Get(vLogsAddr + "/metrics")
@@ -55,19 +55,17 @@ func fetchAndParseVLogsMetrics() map[string]float64 {
 	}
 	defer resp.Body.Close()
 
-	// 我们想要关注的几个核心指标 Key
-	targets := map[string]bool{
-		"vm_rows_inserted_total":    true, // 总插入行数
-		"vl_active_streams":         true, // 当前活跃的日志流
-		"vm_free_disk_space_bytes":  true, // 剩余磁盘空间
-		"vl_log_storage_size_bytes": true, // 日志占用的磁盘空间
+	// 我们想要关注的几个核心指标 - targets := map[string]bool{
+		"vm_rows_inserted_total":    true, //   总插入行数
+		"vl_active_streams":         true, //   当前活跃的Log流
+		"vm_free_disk_space_bytes":  true, //   剩余磁盘空间
+		"vl_log_storage_size_bytes": true, //   Log占用的磁盘空间
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
-		// 略过注释行
-		if strings.HasPrefix(line, "#") || line == "" {
+		// 略过注释行 - strings.HasPrefix(line, "#") || line == "" {
 			continue
 		}
 
@@ -77,7 +75,7 @@ func fetchAndParseVLogsMetrics() map[string]float64 {
 		}
 
 		key := parts[0]
-		// 处理带 Label 的 Key，如 vm_rows_inserted_total{type="log"}
+		// Handle带 - 的 Key，如 vm_rows_inserted_total{type="log"}
 		cleanKey := key
 		if strings.Contains(key, "{") {
 			cleanKey = strings.Split(key, "{")[0]

@@ -10,15 +10,13 @@ import {
 } from "@/components/ui/select"
 import { ShieldCheck, AlertOctagon, HelpCircle, Ban, Loader2, CheckCircle2 } from "lucide-react";
 
-// 定义符合 Sentinel 逻辑的关闭分类
+// 定义符合 - 逻辑的Close分类
 export type ClosingClassification =
-  | "TruePositive_Malicious"      // 真实威胁
-  | "BenignPositive_Suspicious"   // 正常但可疑 (如压测)
-  | "FalsePositive_IncorrectLogic" // 误报 - 逻辑错误
-  | "FalsePositive_InaccurateData" // 误报 - 数据源问题
-  | "Undetermined";                // 无法确定
-
-interface IncidentResolveDialogProps {
+  | "TruePositive_Malicious"      //   真实威胁
+  | "BenignPositive_Suspicious"   //   正常但可疑 (如压测)
+  | "FalsePositive_IncorrectLogic" //   误报 - 逻辑Error
+  | "FalsePositive_InaccurateData" //   误报 - Data源问题
+  | "Undetermined";                // Unable - interface IncidentResolveDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: (classification: string, comment: string) => Promise<void>;
@@ -33,13 +31,12 @@ export function IncidentResolveDialog({ open, onOpenChange, onConfirm }: Inciden
     if (!classification) return;
     setLoading(true);
     try {
-      await onConfirm(classification, comment); // 触发 index.tsx 中的 API 调用
+      await onConfirm(classification, comment); // 触发 - .tsx Medium的 API 调用
       onOpenChange(false);
-      // 清空表单
-      setClassification("");
+      // 清空表单 - ("");
       setComment("");
     } catch (error) {
-      // 错误通常由全局拦截器或父组件处理
+      //   Error通常由全局拦截器或父Group件Handle
     } finally {
       setLoading(false);
     }
@@ -59,7 +56,7 @@ export function IncidentResolveDialog({ open, onOpenChange, onConfirm }: Inciden
         </DialogHeader>
 
         <div className="grid gap-6 py-4">
-          {/* 1. 分类选择 (Classification) */}
+          {/* 1. 分类Select (Classification) */}
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase text-muted-foreground">
               Classification <span className="text-red-500">*</span>
@@ -101,7 +98,7 @@ export function IncidentResolveDialog({ open, onOpenChange, onConfirm }: Inciden
             </Select>
           </div>
 
-          {/* 2. 备注输入 (Comment) */}
+          {/* 2. 备注Input (Comment) */}
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase text-muted-foreground">
               Investigation Notes / Comments

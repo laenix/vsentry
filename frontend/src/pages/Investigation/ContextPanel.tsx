@@ -14,8 +14,7 @@ interface ContextPanelProps {
   setNewVarValue: (val: string) => void;
   handleAddVar: () => void;
   handleRemoveVar: (key: string) => void;
-  // 取证上下文
-  forensicsCaseId?: number;
+  // Forensics上下文 - ?: number;
   forensicsFileId?: number;
   forensicsFileName?: string;
 }
@@ -42,11 +41,11 @@ export function ContextPanel({
             Investigation Context
           </CardTitle>
           <CardDescription className="text-xs">
-            {/* 显示来源：告警 或 取证 */}
+            {/* 显示来源：Alert 或 Forensics */}
             {forensicsCaseId ? (
               <span className="flex items-center gap-1 text-purple-600 font-medium">
                 <FlaskConical className="w-3 h-3" /> 
-                取证案件 #{forensicsCaseId}
+                ForensicsCase #{forensicsCaseId}
                 {forensicsFileName && <span className="text-muted-foreground"> - {forensicsFileName}</span>}
               </span>
             ) : activeIncidentId ? (

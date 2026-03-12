@@ -1,4 +1,4 @@
-//go:build darwin
+//  go:build darwin
 
 package collector
 
@@ -18,7 +18,7 @@ type DarwinCollector struct {
 	cfg config.AgentConfig
 }
 
-// NewOsCollector 当编译目标为 GOOS=darwin 时自动选中
+// NewOsCollector - GOOS=darwin 时自动选Medium
 func NewOsCollector(cfg config.AgentConfig) (Collector, error) {
 	return &DarwinCollector{
 		cfg: cfg,
@@ -28,9 +28,9 @@ func NewOsCollector(cfg config.AgentConfig) (Collector, error) {
 func (c *DarwinCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
 	var allLogs []ocsf.VSentryOCSFEvent
 
-	// 构建 log show 命令，获取过去 Interval 秒的日志
-	// --style syslog: 让 Apple 复杂的二进制日志输出为我们熟悉的单行文本格式
-	// --predicate: 过滤出我们关心的安全子系统，避免日志风暴引发 CPU 飙升
+	// 构建 - show 命令，Get过去 Interval 秒的Log
+	//   --style syslog: 让 Apple 复杂的二进制LogOutput为我们熟悉的单行文本格式
+	//   --predicate: Filter出我们关心的Security子System，避免Log风暴引发 CPU 飙升
 	timeWindow := fmt.Sprintf("%ds", c.cfg.Interval)
 	predicate := `process == "sudo" OR process == "loginwindow" OR subsystem == "com.apple.securityd" OR subsystem == "com.apple.syspolicy"`
 
@@ -38,7 +38,7 @@ func (c *DarwinCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		// 如果执行失败，可能没有匹配到日志，直接返回空
+		//   如果ExecuteFailed，可能没有匹配到Log，直接Return空
 		return allLogs, nil
 	}
 
@@ -46,7 +46,7 @@ func (c *DarwinCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// 忽略 log show 的头尾说明信息 (如 "Filtering the log data using...")
+		// Ignore - show 的头尾说明Info (如 "Filtering the log data using...")
 		if line == "" || line[0] == 'F' || line[0] == 'L' {
 			continue
 		}
@@ -68,8 +68,7 @@ func (c *DarwinCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
 			Unmapped: make(map[string]interface{}),
 		}
 
-		// 将处理权交给双引擎大一统 Mapper
-		mapper.EnrichText("darwin_unified", line, &entry)
+		// 将Handle权交给双Engine大一统 - mapper.EnrichText("darwin_unified", line, &entry)
 
 		allLogs = append(allLogs, entry)
 	}

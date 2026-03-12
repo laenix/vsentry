@@ -1,8 +1,8 @@
 package ocsf
 
-// ==============================================================================
-// OCSF 对象 (Objects) 定义
-// ==============================================================================
+//   ==============================================================================
+// OCSF - (Objects) 定义
+//   ==============================================================================
 
 type Metadata struct {
 	Version  string `json:"version,omitempty"`
@@ -34,8 +34,7 @@ type Endpoint struct {
 
 type User struct {
 	Name   string `json:"name,omitempty"`
-	UID    string `json:"uid,omitempty"` // 可存放 SID
-	Domain string `json:"domain,omitempty"`
+	UID    string `json:"uid,omitempty"` // 可存放 - Domain string `json:"domain,omitempty"`
 	Type   string `json:"type,omitempty"`
 	Group  string `json:"group_name,omitempty"`
 }
@@ -63,14 +62,14 @@ type Hash struct {
 	SHA256 string `json:"sha256,omitempty"`
 }
 
-// 【新增】Windows 注册表对象
+//   【New增】Windows 注册表对象
 type Registry struct {
 	Key   string `json:"key,omitempty"`
 	Value string `json:"value,omitempty"`
 	Data  string `json:"data,omitempty"`
 }
 
-// 【新增】Windows 服务与计划任务对象
+//   【New增】Windows Service与PlanTask对象
 type Service struct {
 	Name      string `json:"name,omitempty"`
 	State     string `json:"state,omitempty"`
@@ -78,7 +77,7 @@ type Service struct {
 	CmdLine   string `json:"cmd_line,omitempty"`
 }
 
-// 【新增】恶意软件与威胁发现对象 (对接 Defender/AV)
+//   【New增】恶意软件与威胁发现对象 (对接 Defender/AV)
 type Malware struct {
 	Name           string   `json:"name,omitempty"`
 	Classification string   `json:"classification,omitempty"`

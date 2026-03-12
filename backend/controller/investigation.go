@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// ExecuteInvestigation 执行带参调查查询 (仅支持 Rule Center 的 rule_id)
+// ExecuteInvestigation - (仅支持 Rule Center 的 rule_id)
 func ExecuteInvestigation(ctx *gin.Context) {
 	var req struct {
 		RuleID     uint              `json:"rule_id" binding:"required"`
@@ -31,15 +31,14 @@ func ExecuteInvestigation(ctx *gin.Context) {
 
 	db := database.GetDB()
 
-	// 查询 Rule (type = "investigation")
+	// Query - (type = "investigation")
 	var rule model.Rule
 	if err := db.First(&rule, req.RuleID).Error; err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"msg": "Rule not found"})
+		ctx.JSON(http.StatusNot found, gin.H{"msg": "Rule not found"})
 		return
 	}
 
-	// 验证规则类型
-	if rule.Type != "investigation" {
+	// ValidateRuleType - rule.Type != "investigation" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"msg": "Rule is not an investigation rule"})
 		return
 	}
@@ -47,16 +46,15 @@ func ExecuteInvestigation(ctx *gin.Context) {
 	logSQL := rule.Query
 	ruleName := rule.Name
 
-	// 初始化变量池 (Variables Pool)
+	//   初始化Variable池 (Variables Pool)
 	vars := make(map[string]string)
 
-	// 设置默认时间范围
-	oneYearAgo := time.Now().AddDate(-1, 0, 0).UTC().Format(time.RFC3339)
+	// Settings默认Time范围 - := time.Now().AddDate(-1, 0, 0).UTC().Format(time.RFC3339)
 	oneYearLater := time.Now().AddDate(1, 0, 0).UTC().Format(time.RFC3339)
 	vars["start_time"] = oneYearAgo
 	vars["end_time"] = oneYearLater
 
-	// 加载 Incident 及其关联的 Alerts
+	// Load - 及其关联的 Alerts
 	if req.IncidentID > 0 {
 		var incident model.Incident
 		if err := db.Preload("Alerts").First(&incident, req.IncidentID).Error; err == nil {
@@ -94,20 +92,18 @@ func ExecuteInvestigation(ctx *gin.Context) {
 		}
 	}
 
-	// 手动参数覆盖
-	for k, v := range req.Params {
+	// 手动Parameter覆盖 - k, v := range req.Params {
 		vars[k] = v
 	}
 
-	// 动态替换 LogSQL 中的参数
+	// 动态替换 - Medium的Parameter
 	finalLogSQL := logSQL
 	for key, val := range vars {
 		placeholder := fmt.Sprintf("${%s}", key)
 		finalLogSQL = strings.ReplaceAll(finalLogSQL, placeholder, val)
 	}
 
-	// 拦截未被替换的参数
-	if strings.Contains(finalLogSQL, "${") {
+	// 拦截未被替换的Parameter - strings.Contains(finalLogSQL, "${") {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"msg":           "Missing required parameters in rule",
 			"query_preview": finalLogSQL,
@@ -116,10 +112,9 @@ func ExecuteInvestigation(ctx *gin.Context) {
 		return
 	}
 
-	// 调用 VictoriaLogs
-	vlURL := viper.GetString("victorialogs.url")
+	// 调用 - vlURL := viper.GetString("victorialogs.url")
 	if vlURL == "" {
-		vlURL = "http://localhost:9428"
+		vlURL = "http://  localhost:9428"
 	}
 
 	params := url.Values{}
@@ -160,12 +155,10 @@ func ExecuteInvestigation(ctx *gin.Context) {
 		return
 	}
 
-	// 解析 JSONLines
-	var results []map[string]interface{}
+	// Parse - var results []map[string]interface{}
 	scanner := bufio.NewScanner(resp.Body)
 
-	const maxCapacity = 10 * 1024 * 1024 // 10MB
-	buf := make([]byte, maxCapacity)
+	const maxCapacity = 10 * 1024 * 1024 // 10MB - := make([]byte, maxCapacity)
 	scanner.Buffer(buf, maxCapacity)
 
 	for scanner.Scan() {

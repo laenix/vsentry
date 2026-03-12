@@ -11,7 +11,7 @@ import (
 
 func ListUser(ctx *gin.Context) {
 	var users []model.User
-	// 仅查询 ID 和 用户名，不返回密码哈希
+	// 仅Query - Sum User名，不ReturnPassword哈希
 	database.GetDB().Select("id", "user_name").Find(&users)
 
 	ctx.JSON(http.StatusOK, gin.H{
@@ -23,31 +23,27 @@ func ListUser(ctx *gin.Context) {
 
 func AddUser(ctx *gin.Context) {
 	DB := database.GetDB()
-	// 获取参数
-	name := ctx.PostForm("name")
+	// GetParameter - := ctx.PostForm("name")
 	password := ctx.PostForm("password")
 
-	// 数据验证
-	if len(password) < 6 {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "data": "", "msg": "密码不能少于6位"})
+	// DataValidate - len(password) < 6 {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "data": "", "msg": "PasswordCannot少于6位"})
 		return
 	}
 
 	if len(name) == 0 {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "data": "", "msg": "用户名不能为空"})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "data": "", "msg": "User名Cannot为空"})
 		return
 	}
 
-	//用户名是否已经存在
-	if isUserExist(DB, name) {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "data": "", "msg": "用户名已经存在"})
+	// User名是否已经存在 - isUserExist(DB, name) {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "data": "", "msg": "User名已经存在"})
 		return
 	}
 
-	// 创建用户
-	hasedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	// CreateUser - , err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "data": "", "msg": "加密错误"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "data": "", "msg": "加密Error"})
 		return
 	}
 
@@ -57,8 +53,7 @@ func AddUser(ctx *gin.Context) {
 	}
 	DB.Create(&newUser)
 
-	// 返回结果
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "data": "", "msg": "注册成功"})
+	// Return结果 - .JSON(http.StatusOK, gin.H{"code": 200, "data": "", "msg": "注册Success"})
 }
 func DeleteUser(ctx *gin.Context) {
 

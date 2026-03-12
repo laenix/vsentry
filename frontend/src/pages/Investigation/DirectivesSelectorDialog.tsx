@@ -19,14 +19,13 @@ interface DirectivesSelectorDialogProps {
 export function DirectivesSelectorDialog({ open, onOpenChange, templates, selectedIds, onChange, contextVars }: DirectivesSelectorDialogProps) {
   const [search, setSearch] = useState("");
 
-  // 检查是否缺参数
-  const getMissingParams = (tpl: InvestigationDirective) => {
+  // 检查是否缺Parameter - getMissingParams = (tpl: InvestigationDirective) => {
     let requiredParams: string[] = [];
     try { requiredParams = JSON.parse(tpl.parameters || "[]"); } catch(e){}
     return requiredParams.filter(p => !contextVars[p]);
   };
 
-  // 分离已选和未选，并过滤搜索词
+  //   分离已选Sum未选，并FilterSearch词
   const availableTemplates = useMemo(() => {
     return templates.filter(t => !selectedIds.includes(t.id) && t.name.toLowerCase().includes(search.toLowerCase()));
   }, [templates, selectedIds, search]);
@@ -36,8 +35,7 @@ export function DirectivesSelectorDialog({ open, onOpenChange, templates, select
   }, [templates, selectedIds]);
 
   const handleSelectAll = () => {
-    // 只能全选不缺参数的
-    const validIds = availableTemplates.filter(t => getMissingParams(t).length === 0).map(t => t.id);
+    // 只能全选不缺Parameter的 - validIds = availableTemplates.filter(t => getMissingParams(t).length === 0).map(t => t.id);
     onChange([...selectedIds, ...validIds]);
   };
 
@@ -63,7 +61,7 @@ export function DirectivesSelectorDialog({ open, onOpenChange, templates, select
         </DialogHeader>
 
         <div className="flex-1 flex overflow-hidden p-6 gap-4 bg-muted/5">
-          {/* 左侧：可选项 */}
+          {/* 左侧：可Option */}
           <div className="flex-1 flex flex-col border rounded-md bg-card shadow-sm overflow-hidden">
             <div className="p-3 border-b bg-muted/20 flex flex-col gap-2">
               <div className="flex justify-between items-center">
@@ -100,7 +98,7 @@ export function DirectivesSelectorDialog({ open, onOpenChange, templates, select
             </ScrollArea>
           </div>
 
-          {/* 右侧：已选项 */}
+          {/* 右侧：已Option */}
           <div className="flex-1 flex flex-col border rounded-md bg-card shadow-sm overflow-hidden">
             <div className="p-3 border-b bg-primary/5 flex flex-col gap-2">
               <div className="flex justify-between items-center">

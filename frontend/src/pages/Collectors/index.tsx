@@ -55,12 +55,12 @@ export default function CollectorsPage() {
         if (savedSourcesStr) {
           try {
             JSON.parse(savedSourcesStr).forEach((s: any) => {
-              // 核心修改：回显时也要把保存的自定义路径带回来
+              //   核心修改：回显时也要把Save的自定义Path带回来
               savedMap.set(s.type || s.path, { 
                 enabled: s.enabled, 
                 event_ids_str: s.event_ids?.join(", ") || "", 
                 query: s.query || "",
-                path: s.path // 保存被用户修改过的路径
+                path: s.path //   Save被User修改过的Path
               });
             });
           } catch (e) {}
@@ -71,7 +71,7 @@ export default function CollectorsPage() {
           const savedState = savedMap.get(key) || { enabled: false, event_ids_str: "", query: "", path: "" };
           return {
             type: item.type || item.Type || '',
-            // 优先使用已保存的路径，如果没有则使用后端默认的模板路径
+            //   优先使用已Save的Path，如果没有则使用后端默认的TemplatePath
             path: savedState.path || item.path || item.Path || '',
             label: item.label || item.Label || item.type || '',
             enabled: savedState.enabled,
@@ -99,8 +99,7 @@ export default function CollectorsPage() {
       }
       return {
         type: s.type, 
-        path: s.path, // 这里会把用户修改后的新路径同步进 JSON
-        format: formData.type === "windows" ? "windows_event" : "file",
+        path: s.path, // 这里会把User修改后的NewPathSync进 - format: formData.type === "windows" ? "windows_event" : "file",
         enabled: true, 
         event_ids: ids.length > 0 ? ids : undefined,
         query: s.query && s.query.trim() !== "" ? s.query.trim() : undefined
@@ -121,7 +120,7 @@ export default function CollectorsPage() {
     syncSourcesToFormData(updated);
   };
 
-  // 【新增功能】：更新路径
+  //   【New增功能】：UpdatePath
   const updateSourcePath = (type: string, newPath: string) => {
     const updated = availableSources.map(s => s.type === type ? { ...s, path: newPath } : s);
     setAvailableSources(updated);
@@ -280,8 +279,7 @@ export default function CollectorsPage() {
         open={dialogOpen} onOpenChange={setDialogOpen} editingConfig={editingConfig}
         formData={formData} setFormData={setFormData} ingests={ingests} availableSources={availableSources}
         onToggleSource={toggleSource} onUpdateSourceConfig={updateSourceConfig} onPresetClick={handlePresetClick}
-        onUpdateSourcePath={updateSourcePath} // 将新函数传入子组件
-        onSubmit={handleSubmit} submitting={submitting}
+        onUpdateSourcePath={updateSourcePath} // 将New函数传入子Group件 - ={handleSubmit} submitting={submitting}
       />
     </div>
   );

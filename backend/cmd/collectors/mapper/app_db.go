@@ -8,11 +8,11 @@ import (
 )
 
 var (
-	// MySQL 8.x 错误日志格式: 2026-10-25T10:00:00.123456Z 0 [ERROR] [MY-012345] [Server] message
+	// MySQL - .x ErrorLog格式: 2026-10-25T10:00:00.123456Z 0 [ERROR] [MY-012345] [Server] message
 	mysqlErrRe = regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+\d+\s+\[([^\]]+)\]\s+\[([^\]]+)\]\s+\[([^\]]+)\]\s+(.*)$`)
 
-	// Redis 日志格式: 12345:M 25 Oct 2026 10:00:00.123 * message
-	// PID:Role (M=Master, S=Slave, C=Child) Date Time Level (., -, *, #) Message
+	// Redis - : 12345:M 25 Oct 2026 10:00:00.123 * message
+	//   PID:Role (M=Master, S=Slave, C=Child) Date Time Level (., -, *, #) Message
 	redisLogRe = regexp.MustCompile(`^(\d+):([A-Z])\s+(\d{1,2}\s+[a-zA-Z]{3}\s+\d{4}\s+\d{2}:\d{2}:\d{2}\.\d+)\s+([.\-*#])\s+(.*)$`)
 )
 
@@ -50,8 +50,7 @@ func mapMysqlError(line string, entry *ocsf.VSentryOCSFEvent) {
 			entry.SeverityID = ocsf.SeverityIDInfo
 		}
 
-		// 监控暴破或权限拒绝
-		if strings.Contains(entry.Message, "Access denied for user") {
+		// Monitor暴破或PermissionReject - strings.Contains(entry.Message, "Access denied for user") {
 			entry.CategoryName = ocsf.CategoryIdentity
 			entry.ClassName = "Authentication"
 			entry.ClassUID = ocsf.ClassAuthentication
@@ -69,19 +68,19 @@ func mapRedisLog(line string, entry *ocsf.VSentryOCSFEvent) {
 
 	matches := redisLogRe.FindStringSubmatch(line)
 	if len(matches) >= 6 {
-		// matches[1]=PID, matches[2]=Role, matches[4]=Level, matches[5]=Message
+		//   matches[1]=PID, matches[2]=Role, matches[4]=Level, matches[5]=Message
 		entry.Process = &ocsf.Process{
 			Name: "redis-server",
 		}
 
-		// 角色解析：M=Master, S=Slave, C=Child, X=Sentinel
+		//   RoleParse：M=Master, S=Slave, C=Child, X=Sentinel
 		role := matches[2]
 		entry.Unmapped["redis_role"] = role
 
 		levelIndicator := matches[4]
 		entry.Message = matches[5]
 
-		// Redis 日志等级符号: . (Debug), - (Verbose), * (Notice), # (Warning)
+		// Redis - : . (Debug), - (Verbose), * (Notice), # (Warning)
 		switch levelIndicator {
 		case "#":
 			entry.Severity = ocsf.SeverityHigh

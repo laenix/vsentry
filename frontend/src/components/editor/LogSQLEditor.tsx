@@ -27,7 +27,7 @@ export function LogSQLEditor({ value, onChange, onRun }: LogSQLEditorProps) {
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
-    // 绑定 Ctrl+Enter 运行
+    // 绑定 - +Enter Run
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       onRun?.();
     });

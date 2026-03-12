@@ -1,7 +1,7 @@
-// src/lib/api/vl-client.ts
+//   src/lib/api/vl-client.ts
 
 /**
- * 基础日志行结构
+ * 基础Log行结构
  */
 export interface LogRow {
   _time: string;
@@ -10,19 +10,19 @@ export interface LogRow {
   [key: string]: any;
 }
 
-/** * 默认返回类型 (兼容 LogRow 和聚合结果) 
+/** * 默认ReturnType (兼容 LogRow Sum聚合结果) 
  */
 export type VLResult = LogRow | Record<string, any>;
 
 /**
- * Hits 接口的返回结构
+ * Hits Interface的Return结构
  */
 export interface VLHitsResponse {
   hits: number;
 }
 
 /**
- * 获取 Token（与 vsentry-client.ts 保持一致）
+ * Get Token（与 vsentry-client.ts 保持一致）
  */
 function getAuthHeader(): Record<string, string> {
   const token = localStorage.getItem("vsentry_token");
@@ -45,14 +45,14 @@ function buildParams(query: string, start?: string, end?: string, limit?: number
 }
 
 /**
- * 构建 Hits 查询参数 (需要 step 参数)
+ * 构建 Hits QueryParameter (Need step Parameter)
  */
 function buildHitsParams(query: string, start?: string, end?: string, step?: string): URLSearchParams {
   const params = new URLSearchParams();
   params.append("query", query);
   if (start) params.append("start", start);
   if (end) params.append("end", end);
-  // step 参数用于 hits 时间直方图，不传则自动计算
+  // step - hits Time直方图，不传则自动计算
   if (step && step !== "auto") {
     params.append("step", step);
   }
@@ -60,8 +60,8 @@ function buildHitsParams(query: string, start?: string, end?: string, step?: str
 }
 
 /**
- * 1. 查询日志或聚合数据 (POST /select/logsql/query)
- * 支持泛型 T，用于自动推断聚合查询的返回结构
+ * 1. QueryLog或聚合Data (POST /select/logsql/query)
+ * 支持泛型 T，用于自动推断聚合Query的Return结构
  * 注意：现在通过后端 API 代理到 VictoriaLogs
  */
 export async function runVLQuery<T = VLResult>(
@@ -73,12 +73,12 @@ export async function runVLQuery<T = VLResult>(
   
   const body = buildParams(query, start, end, limit);
 
-  // 使用 /api/select 路径，后端会代理到 VictoriaLogs
+  //   使用 /api/select Path，后端会代理到 VictoriaLogs
   const response = await fetch("/api/select/logsql/query", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      ...getAuthHeader(), // 添加 Token 认证
+      ...getAuthHeader(), // Add - Auth
     },
     body: body,
   });
@@ -88,7 +88,7 @@ export async function runVLQuery<T = VLResult>(
     throw new Error(text || `Query failed: ${response.status}`);
   }
 
-  // 处理 JSON Lines 流式响应 (保持高性能)
+  // Handle - Lines 流式Response (保持HighPerformance)
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
   const result: T[] = [];
@@ -115,8 +115,7 @@ export async function runVLQuery<T = VLResult>(
     }
   }
   
-  // 处理最后一行
-  if (buffer.trim()) {
+  // Handle最后一行 - (buffer.trim()) {
     try {
       result.push(JSON.parse(buffer));
     } catch (e) {}
@@ -126,9 +125,9 @@ export async function runVLQuery<T = VLResult>(
 }
 
 /**
- * 2. 查询命中总数 (POST /select/logsql/hits)
+ * 2. Query命MediumTotal (POST /select/logsql/hits)
  * 通过后端 API 代理
- * 注意：VictoriaLogs /select/logsql/hits 在 v1.46.0 有兼容性问题，暂不抛出错误
+ * 注意：VictoriaLogs /select/logsql/hits 在 v1.46.0 有兼容性问题，暂不抛出Error
  */
 export async function runVLHits(
   query: string,
@@ -148,7 +147,7 @@ export async function runVLHits(
     });
 
     if (!response.ok) {
-      // hits 接口失败时返回预估数量，不阻塞主查询
+      // hits - ，不Block主Query
       return 0;
     }
 

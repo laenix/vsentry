@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { incidentService } from "@/services/incidents";
 import type { Incident } from "@/services/incidents";
-import { MonacoInput } from "./MonacoInput"; // 复用你的 MonacoInput 做 Mock 数据
+import { MonacoInput } from "./MonacoInput"; // 复用你的 - 做 Mock Data
 import { Loader2, Play, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -12,7 +12,7 @@ interface TestRunDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRun: (data: { incident_id?: number; mock_data?: any }) => void;
-  triggerConfig: any; // ✅ 接收当前剧本的 Trigger 配置
+  triggerConfig: any; //   ✅ Receive当前Playbook的 Trigger Config
 }
 
 export function TestRunDialog({ open, onOpenChange, onRun, triggerConfig }: TestRunDialogProps) {
@@ -24,8 +24,7 @@ export function TestRunDialog({ open, onOpenChange, onRun, triggerConfig }: Test
   const triggerType = triggerConfig?.trigger_type || 'incident_created';
 
   useEffect(() => {
-    // 只有在事件触发模式下才去拉取列表
-    if (open && triggerType === 'incident_created') {
+    // 只有在Event触发模式下才去拉取List - (open && triggerType === 'incident_created') {
       setLoading(true);
       incidentService.list('new')
         .then(res => setIncidents(res.data || []))
@@ -38,7 +37,7 @@ export function TestRunDialog({ open, onOpenChange, onRun, triggerConfig }: Test
       if (!selectedId) return;
       onRun({ incident_id: Number(selectedId) });
     } else {
-      // 手动/定时模式：发送 JSON Mock 数据
+      //   手动/定时模式：Send JSON Mock Data
       try {
         const parsed = JSON.parse(mockData);
         onRun({ mock_data: parsed });

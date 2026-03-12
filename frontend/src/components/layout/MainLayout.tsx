@@ -11,17 +11,16 @@ import {
   Settings,
   Activity,
   Server,
-  Target, // ✅ 新增靶心图标
-  Fingerprint // ✅ 为后期的取证功能预留指纹图标
+  Target, //   ✅ New增靶心图标
+  Fingerprint //   ✅ 为后期的Forensics功能预留指纹图标
 } from "lucide-react";
 import { useTabStore } from "@/stores/tab-store";
 import type { TabType } from "@/stores/tab-store";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils"; // 假设你有这个工具函数，如果没有可以直接写 className字符串
+import { cn } from "@/lib/utils"; //   假设你有这个工具函数，如果没有Can直接写 className字符串
 
-// 定义菜单项配置
-const MENU_ITEMS: { type: TabType; icon: any; label: string }[] = [
+// 定义Menu项Config - MENU_ITEMS: { type: TabType; icon: any; label: string }[] = [
   { type: 'overview', icon: LayoutDashboard, label: 'Overview' },
   { type: 'logs', icon: FileText, label: 'Logs Query' },
   { type: 'investigation', icon: Target, label: 'Investigation' },
@@ -45,26 +44,26 @@ export function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 1. ✅ Deep Linking: 初始化时根据 URL 自动打开 Tab
+  //   1. ✅ Deep Linking: 初始化时根据 URL 自动打开 Tab
   useEffect(() => {
-    // 移除开头的 '/'，例如 "/incidents" -> "incidents"
-    // 如果是根路径 "/"，默认给 "overview"
+    //   移除开头的 '/'，例如 "/incidents" -> "incidents"
+    //   如果是根Path "/"，默认给 "overview"
     const path = location.pathname === '/' ? 'overview' : location.pathname.substring(1);
 
-    // 简单的映射检查，防止无效路径报错
+    //   简单的映射检查，防止无效Path报错
     const isValidTab = MENU_ITEMS.some(item => item.type === path);
 
     if (isValidTab) {
       addTab(path as TabType);
     } else if (path === 'login') {
-      // login 由 App.tsx 路由处理，这里忽略
+      // login - App.tsx 路由Handle，这里Ignore
     } else {
-      // 如果路径无法识别，默认回退到 Overview
+      // 如果PathUnable - ，默认Fallback到 Overview
       if (path !== '') addTab('overview');
     }
-  }, []); // 仅挂载时执行一次
+  }, []); //   仅挂载时Execute一次
 
-  // 获取当前激活的 Tab 类型，用于高亮菜单
+  // Get当前Activate的 - Type，用于High亮Menu
   const currentTab = tabs.find(t => t.id === activeTabId);
   const currentTabType = currentTab?.type || 'overview';
 
@@ -80,7 +79,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           SOC Platform
         </div>
 
-        {/* 菜单区域 */}
+        {/* Menu区域 */}
         <ScrollArea className="flex-1 py-4">
           <nav className="grid gap-1 px-3 text-sm font-medium">
             {MENU_ITEMS.map((item) => {
@@ -89,15 +88,15 @@ export function MainLayout({ children }: MainLayoutProps) {
               return (
                 <Link
                   key={item.type}
-                  to={`/${item.type}`} // ✅ 关键：生成真实的 href，支持右键打开
+                  to={`/${item.type}`} //   ✅ 关键：生成真实的 href，支持右键打开
                   onClick={(e) => {
-                    // ✅ 关键：左键点击阻止跳转，使用 SPA 逻辑
+                    //   ✅ 关键：左键点击阻止跳转，使用 SPA 逻辑
                     e.preventDefault();
 
-                    // 1. 切换 Tab
+                    //   1. 切换 Tab
                     addTab(item.type);
 
-                    // 2. 手动更新 URL (不刷新页面)
+                    //   2. 手动Update URL (不Refresh页面)
                     window.history.pushState({}, "", `/${item.type}`);
                   }}
                   className={cn(
@@ -110,7 +109,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
                   {item.label}
 
-                  {/* 可选：如果是 Incidents 且有未读数，可以在这里加个 Badge */}
+                  {/* 可选：如果是 Incidents 且有未读数，Can在这里加个 Badge */}
                   {item.type === 'incidents' && (
                     <span className="ml-auto flex h-2 w-2 rounded-full bg-red-600" />
                   )}
@@ -120,7 +119,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           </nav>
         </ScrollArea>
 
-        {/* 底部用户信息区域 (可选) */}
+        {/* 底部UserInfo区域 (可选) */}
         <div className="mt-auto border-t p-4">
           <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate('/login')}>
             <span className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[10px]">AD</span>

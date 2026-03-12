@@ -15,7 +15,7 @@ export function LogEntryItem({ log, visibleColumns }: LogEntryItemProps) {
       "border-b border-border/40 bg-background transition-colors hover:bg-muted/20 group",
       isOpen && "bg-muted/5"
     )}>
-      {/* === 未展开状态 (Collapsed) === */}
+      {/* === 未展开Status (Collapsed) === */}
       <div 
         className="flex items-center gap-0 px-2 h-8 cursor-pointer w-full select-none"
         onClick={() => setIsOpen(!isOpen)}
@@ -27,18 +27,18 @@ export function LogEntryItem({ log, visibleColumns }: LogEntryItemProps) {
         
         {/* 2. 内容预览区 - 核心复刻 vmui
             - whitespace-nowrap: 核心！禁止换行
-            - overflow-hidden: 超出父容器直接切断
+            - overflow-hidden: 超出父Container直接切断
         */}
         <div className="flex items-center gap-6 flex-1 overflow-hidden whitespace-nowrap min-w-0">
           {visibleColumns.map(col => (
-            // shrink-0 确保字段不会因为宽度不够被挤扁，而是保持原样展示，直到被切断
+            //   shrink-0 确保字段不会因为宽度不够被挤扁，而是保持原样展示，直到被切断
             <div key={col} className="flex items-baseline gap-2 shrink-0">
               {/* Key: 灰色、大写、粗体 */}
               <span className="text-[10px] font-black text-muted-foreground/50 uppercase font-mono tracking-tight shrink-0">
                 {col}:
               </span>
               
-              {/* Value: 黑色、等宽。不再限制宽度，让它自然延伸 */}
+              {/* Value: 黑色、等宽。不再Limit宽度，让它自然延伸 */}
               <span className="text-[11px] font-mono text-foreground/90 font-medium">
                 {String(log[col] ?? "")}
               </span>
@@ -47,8 +47,8 @@ export function LogEntryItem({ log, visibleColumns }: LogEntryItemProps) {
         </div>
       </div>
 
-      {/* === 展开状态 (Expanded) === 
-          需求：只展示 JSON，不重复展示字段列表
+      {/* === 展开Status (Expanded) === 
+          需求：只展示 JSON，不重复展示字段List
       */}
       {isOpen && (
         <div className="px-8 pb-3 pt-1 animate-in fade-in slide-in-from-top-1 duration-150 cursor-auto">
@@ -64,7 +64,7 @@ export function LogEntryItem({ log, visibleColumns }: LogEntryItemProps) {
               {JSON.stringify(log, null, 2)}
             </pre>
 
-            {/* 复制按钮 */}
+            {/* 复制Button */}
             <button 
               onClick={(e) => {
                 e.stopPropagation();

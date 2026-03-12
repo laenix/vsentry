@@ -15,16 +15,15 @@ import { ReadOnlyJsonViewer } from "@/components/editor/ReadOnlyJsonViewer";
 import { toast } from "sonner";
 import { useTabStore } from "@/stores/tab-store";
 
-// 1. 接口定义：对齐 Go 后端结构
+//   1. Interface定义：对齐 Go 后端结构
 interface Alert {
   id: number;
-  // 兼容多种时间字段格式 (Go CreatedAt 或 JSON _time)
+  //   兼容多种Time字段格式 (Go CreatedAt 或 JSON _time)
   created_at?: string;
   CreatedAt?: string;
   _time?: string;
 
-  content: string;     // 原始 JSON
-  fingerprint: string;
+  content: string;     // 原始 - fingerprint: string;
 }
 
 interface IncidentDetail extends Incident {
@@ -52,7 +51,7 @@ export function IncidentDetailDialog({
   const [loading, setLoading] = useState(false);
   const { addTab } = useTabStore();
 
-  // 1. 加载详情
+  //   1. LoadDetail
   useEffect(() => {
     if (open && alertId) {
       const fetchDetail = async () => {
@@ -72,17 +71,17 @@ export function IncidentDetailDialog({
       fetchDetail();
     }
   }, [open, alertId]);
-  // ✅ 新增：关闭当前详情弹窗，并在后台打开调查 Tab
+  //   ✅ New增：Close当前Detail弹窗，并在后台打开Investigation Tab
   const launchInvestigation = () => {
     if (!data) return;
-    onOpenChange(false); // 关掉弹窗，让视野更清爽
+    onOpenChange(false); //   关掉弹窗，让视野更清爽
     addTab('investigation', `Investigate #${data.ID}`, {
       incident_id: data.ID
     });
   };
-  // ✅ 2. 核心：在新窗口打开纯时间范围查询
+  //   ✅ 2. 核心：在New窗口打开纯Time范围Query
   const handleInvestigateNewWindow = (alert: Alert) => {
-    // A. 智能获取时间
+    //   A. 智能GetTime
     const timeStr = alert.created_at || alert.CreatedAt || alert._time || new Date().toISOString();
     const eventTime = new Date(timeStr).getTime();
 
@@ -91,20 +90,20 @@ export function IncidentDetailDialog({
       return;
     }
 
-    // B. 计算前后 5 分钟 (Context Buffer)
+    //   B. 计算前后 5 分钟 (Context Buffer)
     const BUFFER_MS = 5 * 60 * 1000;
     const start = new Date(eventTime - BUFFER_MS).toISOString();
     const end = new Date(eventTime + BUFFER_MS).toISOString();
 
-    // C. 构造 VictoriaLogs 标准时间范围查询
-    // 语法: _time:[start_iso, end_iso]
-    // 不包含 fingerprint 或 content，只看这段时间发生了什么
+    //   C. 构造 VictoriaLogs 标准Time范围Query
+    //   语法: _time:[start_iso, end_iso]
+    // 不包含 - 或 content，只看这段Time发生了什么
     const vlQuery = `_time:[${start}, ${end}]`;
 
-    // D. 构造 URL (只带 q 参数)
+    //   D. 构造 URL (只带 q Parameter)
     const url = `/logs?q=${encodeURIComponent(vlQuery)}`;
 
-    // E. 在新标签页打开
+    //   E. 在New标签页打开
     window.open(url, '_blank');
 
     toast.success("Context investigation opened in new tab");
@@ -114,10 +113,10 @@ export function IncidentDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 布局修复: 固定高度 + Flex Column 确保滚动条正常工作 */}
+      {/* 布局修复: 固定High度 + Flex Column 确保滚动条正常工作 */}
       <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
 
-        {/* Header: 仅展示信息 */}
+        {/* Header: 仅展示Info */}
         <DialogHeader className="px-6 py-4 border-b bg-muted/10 flex-none">
           <div className="flex justify-between items-start">
             <div className="space-y-1">
@@ -169,7 +168,7 @@ export function IncidentDetailDialog({
               />
             </div>
 
-            {/* 证据时间轴 */}
+            {/* EvidenceTime轴 */}
             <div className="space-y-6">
               <h3 className="text-sm font-bold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
                 <Database className="w-4 h-4" /> Evidence Timeline
@@ -187,7 +186,7 @@ export function IncidentDetailDialog({
                         <div className="absolute left-5 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-primary bg-background group-hover:scale-125 transition-transform z-10" />
 
                         <div className="flex-1 ml-10 space-y-2">
-                          {/* Alert Header: 包含行内操作按钮 */}
+                          {/* Alert Header: 包含行内操作Button */}
                           <div className="flex items-center justify-between bg-card border rounded-t-md p-2 px-3 shadow-sm group-hover:border-primary/30 transition-colors">
                             <div className="flex items-center gap-3">
                               <Badge variant="secondary" className="font-mono text-[10px] h-5">
@@ -198,7 +197,7 @@ export function IncidentDetailDialog({
                               </span>
                             </div>
 
-                            {/* ✅ 行内按钮：打开新窗口查询上下文 */}
+                            {/* ✅ 行内Button：打开New窗口Query上下文 */}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -256,7 +255,7 @@ export function IncidentDetailDialog({
   );
 }
 
-// 辅助组件：信息卡片
+//   辅助Group件：Info卡片
 function SummaryCard({ icon, label, value }: { icon: any; label: string; value: string }) {
   return (
     <div className="bg-card border rounded-lg p-3 space-y-1 shadow-sm">

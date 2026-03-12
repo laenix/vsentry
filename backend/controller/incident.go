@@ -8,30 +8,29 @@ import (
 	"github.com/laenix/vsentry/model"
 )
 
-// ListIncidents 获取事件列表（不带详情，用于大屏展示）
+// ListIncidents - （不带Detail，用于大屏展示）
 func ListIncidents(ctx *gin.Context) {
 	var incidents []model.Incident
 	database.GetDB().Order("last_seen desc").Find(&incidents)
 	ctx.JSON(http.StatusOK, gin.H{"code": 200, "data": incidents})
 }
 
-// GetIncidentDetail 获取事件及其关联的所有证据 (Alerts)
-// GetIncidentDetail 获取事件详情及其包含的所有告警证据
-func GetIncidentDetail(ctx *gin.Context) {
+// GetIncidentDetail - (Alerts)
+// GetIncidentDetail - func GetIncidentDetail(ctx *gin.Context) {
 	id := ctx.Query("id")
 	if id == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "缺少事件ID"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "缺少EventID"})
 		return
 	}
 
 	var incident model.Incident
-	// 使用 Preload("Alerts") 自动执行关联查询，获取该事件下的所有证据
-	// 使用 Preload("Rule") 获取关联的规则信息（包括规则类型）
+	// 使用 - ("Alerts") 自动Execute关联Query，Get该Event下的所有Evidence
+	// 使用 - ("Rule") Get关联的RuleInfo（包括RuleType）
 	db := database.GetDB()
 	err := db.Preload("Alerts").Preload("Rule").First(&incident, id).Error
 
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "未找到相关事件记录"})
+		ctx.JSON(http.StatusNot found, gin.H{"code": 404, "msg": "未找到相关Event记录"})
 		return
 	}
 
@@ -42,20 +41,18 @@ func GetIncidentDetail(ctx *gin.Context) {
 	})
 }
 
-// AcknowledgeIncident 认领事件
-func AcknowledgeIncident(ctx *gin.Context) {
+// AcknowledgeIncident - func AcknowledgeIncident(ctx *gin.Context) {
 	id := ctx.Query("id")
-	userID, _ := ctx.Get("userid") // 从 AuthMiddleware 获取
+	userID, _ := ctx.Get("userid") // 从 - Get
 
 	database.GetDB().Model(&model.Incident{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"status":   "acknowledged",
 		"assignee": userID,
 	})
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "已受理该事件"})
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "已受理该Event"})
 }
 
-// ResolveIncident 解决事件
-func ResolveIncident(ctx *gin.Context) {
+// ResolveIncident - func ResolveIncident(ctx *gin.Context) {
 	var req struct {
 		ID             uint   `json:"id"`
 		Classification string `json:"classification"`
@@ -67,6 +64,6 @@ func ResolveIncident(ctx *gin.Context) {
 			"closing_classification": req.Classification,
 			"closing_comment":        req.Comment,
 		})
-		ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "事件已关闭"})
+		ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "EventClosed"})
 	}
 }

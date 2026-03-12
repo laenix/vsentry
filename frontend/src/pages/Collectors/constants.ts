@@ -1,14 +1,12 @@
 import { Package, Server, Activity } from "lucide-react";
 
-// 平台图标映射
-export const typeIcons: Record<string, any> = {
+// 平台图标映射 - const typeIcons: Record<string, any> = {
   windows: Package,
   linux: Server,
   macos: Activity,
 };
 
-// 增强的数据源接口
-export interface DataSource {
+// 增强的Data源Interface - interface DataSource {
   type: string;
   path: string;
   label: string;

@@ -9,12 +9,12 @@ import (
 )
 
 var (
-	// Tomcat 默认的 Access Log 格式: %h %l %u %t "%r" %s %b
-	// 示例: 192.168.1.100 - - [25/Oct/2026:10:00:00 +0800] "GET /api/v1/users HTTP/1.1" 200 1024
+	// Tomcat - Access Log 格式: %h %l %u %t "%r" %s %b
+	//   Example: 192.168.1.100 - - [25/Oct/2026:10:00:00 +0800] "GET /api/v1/users HTTP/1.1" 200 1024
 	tomcatAccessRe = regexp.MustCompile(`^(\S+)\s+\S+\s+\S+\s+\[([^\]]+)\]\s+"(\S+)\s+(\S+)\s+\S+"\s+(\d+)\s+(\d+|-)`)
 
-	// Tomcat Catalina 运行日志格式
-	// 示例: 25-Oct-2026 10:00:00.123 INFO [main] org.apache.catalina.startup.Catalina.start Server startup in [1234] milliseconds
+	// Tomcat - RunLog格式
+	//   Example: 25-Oct-2026 10:00:00.123 INFO [main] org.apache.catalina.startup.Catalina.start Server startup in [1234] milliseconds
 	tomcatCatalinaRe = regexp.MustCompile(`^(\d{2}-[a-zA-Z]{3}-\d{4}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+(SEVERE|WARNING|INFO|CONFIG|FINE|FINER|FINEST)\s+\[([^\]]+)\]\s+(\S+)\s+(.*)$`)
 )
 
@@ -26,7 +26,7 @@ func init() {
 func mapTomcatAccess(line string, entry *ocsf.VSentryOCSFEvent) {
 	entry.CategoryName = ocsf.CategoryNetwork
 	entry.ClassName = "HTTP Activity"
-	entry.ClassUID = 4002 // OCSF HTTP Activity
+	entry.ClassUID = 4002 // OCSF - Activity
 
 	matches := tomcatAccessRe.FindStringSubmatch(line)
 	if len(matches) >= 7 {
@@ -71,9 +71,8 @@ func mapTomcatCatalina(line string, entry *ocsf.VSentryOCSFEvent) {
 
 	matches := tomcatCatalinaRe.FindStringSubmatch(line)
 	if len(matches) >= 6 {
-		// Java 线程池名称
-		threadName := matches[3]
-		// 抛出日志的 Java 类名
+		// Java - threadName := matches[3]
+		// 抛出Log的 - 类名
 		className := matches[4]
 		entry.Process = &ocsf.Process{Name: threadName}
 		entry.Unmapped["java_class"] = className
@@ -95,7 +94,7 @@ func mapTomcatCatalina(line string, entry *ocsf.VSentryOCSFEvent) {
 			entry.SeverityID = ocsf.SeverityIDInfo
 		}
 
-		// 检查是否有典型的 Java 漏洞利用痕迹 (如 Log4j JNDI 注入尝试)
+		// 检查是否有典型的 - 漏洞利用痕迹 (如 Log4j JNDI 注入尝试)
 		if strings.Contains(line, "${jndi:") {
 			entry.CategoryName = ocsf.CategoryFindings
 			entry.ClassName = "Security Finding"

@@ -18,7 +18,7 @@ import { TimeRangePicker } from "@/components/logs/TimeRangePicker";
 import { LimitSelector } from "@/components/logs/LimitSelector";
 import { toast } from "sonner";
 
-// ... calcTimeRange 保持不变 ...
+//   ... calcTimeRange 保持不变 ...
 const calcTimeRange = (rangeStr: string) => {
   if (!rangeStr || rangeStr === "all") return { start: undefined, end: undefined };
   const now = new Date();
@@ -52,15 +52,15 @@ export default function LogsPage({ tabData }: LogsPageProps) {
   const [viewMode, setViewMode] = useState<"group" | "table" | "json">("table");
   const [editorHeight, setEditorHeight] = useState(120);
 
-  // 初始化逻辑：优先使用 tabData，其次使用 URL params
+  //   初始化逻辑：优先使用 tabData，其次使用 URL params
   useEffect(() => {
-    // 1. 优先使用 Tab 传入的 query（来自 Deep Hunt 等场景）
+    //   1. 优先使用 Tab 传入的 query（来自 Deep Hunt 等场景）
     let initialQuery = tabData?.query;
-    // Deep Hunt 跳转时默认查询过去1年
+    // Deep - 跳转时默认Query过去1年
     let initialTime = tabData?.query ? "365d" : "5m";
     let initialLimit = "1000";
 
-    // 2. 如果没有 Tab data，则回退到 URL params
+    //   2. 如果没有 Tab data，则Fallback到 URL params
     if (!initialQuery) {
       const q = searchParams.get("q");
       const t = searchParams.get("t");
@@ -76,7 +76,7 @@ export default function LogsPage({ tabData }: LogsPageProps) {
       setLimit(initialLimit);
       setTimeout(() => handlerRun(initialQuery, initialTime, initialLimit), 100);
     }
-  }, []);
+  }, [tabData]);  // Add - 依赖，监听 tabData Change
 
   const handlerRun = useCallback(async (customQuery?: string, customTime?: string, customLimit?: string) => {
     const q = customQuery ?? query;
@@ -86,7 +86,7 @@ export default function LogsPage({ tabData }: LogsPageProps) {
     setLoading(true);
     try {
       const { start, end } = calcTimeRange(t);
-      // 并行请求：数据 + 总数
+      //   并行Request：Data + Total
       const [data, hits] = await Promise.all([
         runVLQuery(q, l, start, end),
         runVLHits(q, start, end, step)
@@ -101,16 +101,14 @@ export default function LogsPage({ tabData }: LogsPageProps) {
     }
   }, [query, timeRange, limit, step, setSearchParams]);
 
-  // 自动刷新逻辑
-  useEffect(() => {
+  // 自动Refresh逻辑 - (() => {
     if (delay > 0) {
       const timer = setInterval(() => handlerRun(), delay * 1000);
       return () => clearInterval(timer);
     }
   }, [delay, handlerRun]);
 
-  // 拖拽逻辑
-  const startResizing = useCallback((e: React.MouseEvent) => {
+  // 拖拽逻辑 - startResizing = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const startY = e.clientY;
     const startHeight = editorHeight;
@@ -129,7 +127,7 @@ export default function LogsPage({ tabData }: LogsPageProps) {
   };
 
   return (
-    // 使用 Tabs 包裹整个页面以共享 viewMode 状态，但不使用 TabsContent 这种分割布局
+    // 使用 - 包裹整个页面以共享 viewMode Status，但不使用 TabsContent 这种分割布局
     <Tabs 
       value={viewMode} 
       onValueChange={(v) => setViewMode(v as any)} 
@@ -184,9 +182,9 @@ export default function LogsPage({ tabData }: LogsPageProps) {
           </div>
         </div>
 
-        {/* --- 右侧：视图切换 (完美还原截图布局) --- */}
+        {/* --- 右侧：View切换 (完美还原截图布局) --- */}
         <div className="ml-auto flex items-center gap-2">
-           {/* 如果是聚合查询(无图表)，在这里显示 Hits 也不错，或者就隐藏 */}
+           {/* 如果是聚合Query(无Chart)，在这里显示 Hits 也不错，或者就隐藏 */}
            {(!logs.length || !logs[0]._time) && totalHits > 0 && (
              <Badge variant="outline" className="h-7 bg-background font-mono">
                HITS: {totalHits.toLocaleString()}
@@ -207,7 +205,7 @@ export default function LogsPage({ tabData }: LogsPageProps) {
         </div>
       </div>
 
-      {/* --- B. SQL 编辑器 --- */}
+      {/* --- B. SQL Edit器 --- */}
       <div className="flex-none border-b relative group z-10 flex flex-col bg-[#1e1e1e]" style={{ height: editorHeight }}>
         <div className="flex-1 min-h-0">
           <LogSQLEditor value={query} onChange={(v) => setQuery(v || "")} onRun={() => handlerRun()} />
@@ -218,10 +216,10 @@ export default function LogsPage({ tabData }: LogsPageProps) {
         </div>
       </div>
 
-      {/* --- C. 图表区域 (自动折叠) --- */}
+      {/* --- C. Chart区域 (自动折叠) --- */}
       <div 
         className="flex-none border-b bg-card relative overflow-hidden transition-all duration-300" 
-        // 如果第一条数据没有 _time (聚合查询)，则高度设为 0 隐藏
+        // 如果第一条Data没有 - (聚合Query)，则High度设为 0 隐藏
         style={{ height: logs.length > 0 && logs[0]._time ? 180 : 0 }}
       > 
          <LogHitsChart data={logs} />

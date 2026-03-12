@@ -1,4 +1,4 @@
-// src/pages/Automation/index.tsx
+//   src/pages/Automation/index.tsx
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ export default function AutomationPage() {
             >
               Playbooks Library
             </TabsTrigger>
-            {/* ✅ 新增：绑定关系管理标签 */}
+            {/* ✅ New增：绑定关系Manage标签 */}
             <TabsTrigger 
               value="bindings" 
               className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none px-4 bg-transparent"
@@ -52,7 +52,7 @@ export default function AutomationPage() {
           <PlaybookList viewMode="list" />
         </TabsContent>
 
-        {/* ✅ 新增：将 PlaybookList 以绑定管理模式运行 */}
+        {/* ✅ New增：将 PlaybookList 以绑定Manage模式Run */}
         <TabsContent value="bindings" className="flex-1 mt-6 outline-none">
           <PlaybookList viewMode="binding" />
         </TabsContent>

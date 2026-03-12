@@ -15,75 +15,66 @@ import (
 func Login(ctx *gin.Context) {
 	DB := database.GetDB()
 
-	// 获取参数
-	name := ctx.PostForm("name")
+	// GetParameter - := ctx.PostForm("name")
 	password := ctx.PostForm("password")
 
-	// 数据验证
-	if len(password) < 6 {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "data": "", "msg": "密码不能少于6位"})
+	// DataValidate - len(password) < 6 {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "data": "", "msg": "PasswordCannot少于6位"})
 		return
 	}
 	var user model.User
 	DB.Where("user_name = ?", name).First(&user)
 	if user.ID == 0 {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "data": "", "msg": "用户不存在或密码错误"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "data": "", "msg": "User不存在或PasswordError"})
 		return
 	}
-	// 判断密码是否正确
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "data": "", "msg": "用户不存在或密码错误"})
+	// 判断Password是否正确 - err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "data": "", "msg": "User不存在或PasswordError"})
 		return
 	}
 
-	// 发放token
-	token, err := middleware.ReleaseToken(user)
+	// 发放token - , err := middleware.ReleaseToken(user)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "data": "", "msg": "系统异常"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "data": "", "msg": "System异常"})
 		log.Printf("token generate error : %v", err)
 		return
 	}
-	//
+	//  
 	loginlogs := model.UserLoginLogs{
 		UserID:    user.ID,
 		IP:        ctx.ClientIP(),
 		UserAgent: ctx.Request.UserAgent(),
 	}
 	DB.Create(&loginlogs)
-	// 返回结果
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{"token": token}, "msg": "登录成功"})
+	// Return结果 - .JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{"token": token}, "msg": "LoginSuccess"})
 }
 
 func UserChangePassword(ctx *gin.Context) {
 	DB := database.GetDB()
-	// 获取参数
-	userId, _ := ctx.Get("userid")
+	// GetParameter - , _ := ctx.Get("userid")
 	oldPassword := ctx.PostForm("old_password")
 	newPassword := ctx.PostForm("new_password")
-	// 数据验证
-	if len(newPassword) < 6 {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "data": "", "msg": "新密码不能少于6位"})
+	// DataValidate - len(newPassword) < 6 {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "data": "", "msg": "NewPasswordCannot少于6位"})
 		return
 	}
 	var user model.User
 	DB.Where("id = ?", userId).First(&user)
 	if user.ID == 0 {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "data": "", "msg": "用户不存在"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "data": "", "msg": "User不存在"})
 		return
 	}
-	// 判断旧密码是否正确
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword)); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "data": "", "msg": "旧密码错误"})
+	// 判断旧Password是否正确 - err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword)); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "data": "", "msg": "旧PasswordError"})
 		return
 	}
-	// 更新密码
-	hasedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	// UpdatePassword - , err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "data": "", "msg": "加密错误"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "data": "", "msg": "加密Error"})
 		return
 	}
 	DB.Model(&user).Update("password", string(hasedPassword))
-	//
+	//  
 	actionlogs := model.UserActionLogs{
 		UserID:    user.ID,
 		Action:    "change password",
@@ -91,15 +82,14 @@ func UserChangePassword(ctx *gin.Context) {
 		UserAgent: ctx.Request.UserAgent(),
 	}
 	DB.Create(&actionlogs)
-	// 返回结果
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "data": "", "msg": "密码修改成功"})
+	// Return结果 - .JSON(http.StatusOK, gin.H{"code": 200, "data": "", "msg": "Password修改Success"})
 }
 
 func Userinfo(ctx *gin.Context) {
 	user, _ := ctx.Get("user")
 	u := user.(model.User)
 	u.Password = ""
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{"user": u}, "msg": "获取用户信息成功"})
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{"user": u}, "msg": "GetUserInfoSuccess"})
 }
 
 func isUserExist(db *gorm.DB, name string) bool {

@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	// 匹配 macOS 的 syslog 风格输出
-	// 示例: 2026-03-03 10:00:00.123456+0800  localhost sudo[12345]: (pam_unix) session opened for user root
+	// 匹配 - 的 syslog 风格Output
+	//   Example: 2026-03-03 10:00:00.123456+0800  localhost sudo[12345]: (pam_unix) session opened for user root
 	darwinLogRe = regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+[+-]\d{4})\s+(\S+)\s+([^\[:]+)(?:\[(\d+)\])?:\s*(.*)$`)
 )
 
@@ -20,20 +20,19 @@ func init() {
 func mapDarwinUnified(line string, entry *ocsf.VSentryOCSFEvent) {
 	matches := darwinLogRe.FindStringSubmatch(line)
 	if len(matches) >= 6 {
-		// 提取时间 (macOS 自带时区，非常精准)
+		//   提取Time (macOS 自带时区，非常精准)
 		timeStr := strings.Replace(matches[1], " ", "T", 1)
 		entry.Time = timeStr
 
-		// 提取执行动作的进程 (如 sudo, loginwindow, CoreServices)
+		//   提取ExecuteAction的Process (如 sudo, loginwindow, CoreServices)
 		processName := matches[3]
 		entry.Process = &ocsf.Process{Name: processName}
 
 		msg := matches[5]
 		entry.Message = msg
 
-		// ==========================================
-		// macOS 威胁狩猎定性引擎
-		// ==========================================
+		//   ==========================================
+		// macOS - //   ==========================================
 		lowerMsg := strings.ToLower(msg)
 
 		if processName == "sudo" {
@@ -64,7 +63,7 @@ func mapDarwinUnified(line string, entry *ocsf.VSentryOCSFEvent) {
 				entry.ActivityName = ocsf.ActionLogon
 			}
 
-			// Apple Gatekeeper (防毒/恶意软件拦截)
+			// Apple - (防毒/恶意软件拦截)
 		} else if processName == "syspolicy" || strings.Contains(lowerMsg, "malware") {
 			entry.CategoryName = ocsf.CategoryFindings
 			entry.ClassName = "Security Finding"

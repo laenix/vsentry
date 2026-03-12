@@ -7,19 +7,17 @@ import (
 	"github.com/spf13/viper"
 )
 
-// ListCustomTables 获取自定义表列表
-func ListCustomTables(ctx *gin.Context) {
+// ListCustomTables - func ListCustomTables(ctx *gin.Context) {
 	db := database.GetDB()
 	var tables []model.CustomTable
 	db.Where("is_active = ?", true).Find(&tables)
 	ctx.JSON(200, gin.H{"code": 200, "data": tables})
 }
 
-// AddCustomTable 添加自定义表
-func AddCustomTable(ctx *gin.Context) {
+// AddCustomTable - func AddCustomTable(ctx *gin.Context) {
 	var req model.CustomTable
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(400, gin.H{"msg": "参数错误"})
+		ctx.JSON(400, gin.H{"msg": "Parameter error"})
 		return
 	}
 
@@ -33,11 +31,10 @@ func AddCustomTable(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{"code": 200, "msg": "Created successfully", "data": req})
 }
 
-// UpdateCustomTable 更新自定义表
-func UpdateCustomTable(ctx *gin.Context) {
+// UpdateCustomTable - func UpdateCustomTable(ctx *gin.Context) {
 	var req model.CustomTable
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(400, gin.H{"msg": "参数错误"})
+		ctx.JSON(400, gin.H{"msg": "Parameter error"})
 		return
 	}
 
@@ -57,7 +54,7 @@ func UpdateCustomTable(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{"code": 200, "msg": "Updated successfully"})
 }
 
-// DeleteCustomTable 删除自定义表（软删除）
+// DeleteCustomTable - （软Delete）
 func DeleteCustomTable(ctx *gin.Context) {
 	id := ctx.Query("id")
 	if id == "" {
@@ -76,14 +73,14 @@ func DeleteCustomTable(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{"code": 200, "msg": "Deleted successfully"})
 }
 
-// GetExternalURL 获取外部访问URL（给前端用）
+// GetExternalURL - （给前端用）
 func GetExternalURL(ctx *gin.Context) {
 	externalURL := viper.GetString("server.external_url")
 	if externalURL == "" {
-		externalURL = "http://localhost:8088"
+		externalURL = "http://  localhost:8088"
 	}
 
-	// 构造完整的 Ingest URL
+	// 构造完整的 - URL
 	data := gin.H{
 		"external_url":       externalURL,
 		"ingest_endpoint":    externalURL + "/api/ingest/collect",

@@ -1,4 +1,4 @@
-//go:build linux
+//  go:build linux
 
 package collector
 
@@ -55,7 +55,7 @@ func (c *LinuxCollector) tailFile(source config.SourceConfig, batchLimit int) ([
 	}
 
 	lastPos := c.positions[source.Path]
-	// 如果文件被轮转（Log Rotation）或者截断，重置读取位置
+	//   如果File被轮转（Log Rotation）或者截断，重置读取位置
 	if info.Size() < lastPos {
 		lastPos = 0
 	}
@@ -90,8 +90,8 @@ func (c *LinuxCollector) tailFile(source config.SourceConfig, batchLimit int) ([
 }
 
 func (c *LinuxCollector) parseLine(source config.SourceConfig, line string) ocsf.VSentryOCSFEvent {
-	// 1. 构造保底的 OCSF 基础事件
-	// 如果这是一条无法被正则匹配的未知日志，它依然会被安全地上报
+	//   1. 构造保底的 OCSF 基础Event
+	// 如果这是一条Unable - ，它依然会被Security地上报
 	entry := ocsf.VSentryOCSFEvent{
 		Time:         time.Now().UTC().Format(time.RFC3339),
 		CategoryName: ocsf.CategorySystem,
@@ -110,9 +110,9 @@ func (c *LinuxCollector) parseLine(source config.SourceConfig, line string) ocsf
 	}
 	entry.Unmapped["source_type"] = source.Type
 
-	// =========================================================================
-	// 2. 将基础事件传递给大一统的 Mapper 文本引擎进行深度正则解析和字段覆写
-	// =========================================================================
+	//   =========================================================================
+	//   2. 将基础Event传递给大一统的 Mapper 文本Engine进行深度正则ParseSum字段覆写
+	//   =========================================================================
 	mapper.EnrichText(source.Type, line, &entry)
 
 	return entry

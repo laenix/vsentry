@@ -13,19 +13,19 @@ export function LogGroupView({ data }: { data: VLResult[] }) {
   const [selectedStream, setSelectedStream] = useState<string | null>(null)
   const detailParentRef = useRef<HTMLDivElement>(null)
 
-  // 1. 提取所有可用字段 (用于下拉筛选)
+  //   1. 提取所有可用字段 (用于下拉筛选)
   const allFields = useMemo(() => {
     if (!data || data.length === 0) return []
     const keys = new Set<string>()
-    // 采样前20条，避免性能问题
+    //   采样前20条，避免Performance问题
     data.slice(0, 20).forEach(log => Object.keys(log).forEach(k => keys.add(k)))
     return Array.from(keys).sort()
   }, [data])
 
-  // 2. 显示列状态
+  //   2. 显示列Status
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["_time", "_msg"])
 
-  // --- 核心修改: 智能列检测逻辑 (与 LogTableView 逻辑保持一致) ---
+  //   --- 核心修改: 智能列检测逻辑 (与 LogTableView 逻辑保持一致) ---
   useEffect(() => {
     if (!data || data.length === 0) return
 
@@ -34,29 +34,29 @@ export function LogGroupView({ data }: { data: VLResult[] }) {
     const isRawLog = keys.includes("_time")
 
     if (isRawLog) {
-      // 日志模式: 默认显示时间、消息
-      // 检查当前 visibleColumns 是否有效，如果无效则重置
+      //   Log模式: 默认显示Time、Message
+      // 检查当前 - 是否有效，如果无效则重置
       const hasValid = visibleColumns.some(c => keys.includes(c))
       if (!hasValid || visibleColumns.length === 0) {
         setVisibleColumns(["_time", "_msg"])
       }
     } else {
-      // 聚合模式: 显示数据中存在的所有字段 (如 count, DestPort)
+      //   聚合模式: 显示DataMedium存在的所有字段 (如 count, DestPort)
       const currentKeysStr = visibleColumns.sort().join(",")
       const newKeysStr = keys.sort().join(",")
       
-      // 只有当字段结构发生变化时才更新，防止死循环
+      //   只有当字段结构发生Change时才Update，防止死循环
       if (currentKeysStr !== newKeysStr) {
          setVisibleColumns(Object.keys(firstRow))
       }
     }
   }, [data])
 
-  // 3. 分组逻辑
+  //   3. 分Group逻辑
   const groups = useMemo(() => {
     const map: Record<string, VLResult[]> = {}
     data.forEach(log => {
-      // 聚合结果通常没有 _stream 字段，我们将其归类为 "{}"
+      // 聚合结果通常没有 - 字段，我们将其归类为 "{}"
       const s = log._stream || "{}" 
       if (!map[s]) map[s] = []
       map[s].push(log)
@@ -66,9 +66,8 @@ export function LogGroupView({ data }: { data: VLResult[] }) {
       .sort((a, b) => b.count - a.count)
   }, [data])
 
-  // 自动选择第一个分组
-  useEffect(() => {
-    // 只有当没有选中，或者选中的流在当前数据中不存在时，才自动选择第一个
+  // 自动Select第一个分Group - (() => {
+    //   只有当没有选Medium，或者选Medium的流在当前DataMedium不存在时，才自动Select第一个
     const exists = groups.find(g => g.stream === selectedStream)
     if ((!selectedStream || !exists) && groups.length > 0) {
       setSelectedStream(groups[0].stream)
@@ -77,17 +76,15 @@ export function LogGroupView({ data }: { data: VLResult[] }) {
 
   const activeGroup = groups.find(g => g.stream === selectedStream)
 
-  // 4. 虚拟滚动配置
+  //   4. 虚拟滚动Config
   const rowVirtualizer = useVirtualizer({
     count: activeGroup?.logs.length || 0,
     getScrollElement: () => detailParentRef.current,
-    estimateSize: () => 40, // 预估高度
-    overscan: 10,
-    measureElement: (el) => el.getBoundingClientRect().height, // 支持动态高度
+    estimateSize: () => 40, // 预估High度 - : 10,
+    measureElement: (el) => el.getBoundingClientRect().height, //   支持动态High度
   })
 
-  // 切换流时重置滚动位置
-  useEffect(() => {
+  // 切换流时重置滚动位置 - (() => {
     rowVirtualizer.scrollToOffset(0)
   }, [selectedStream])
 
@@ -98,7 +95,7 @@ export function LogGroupView({ data }: { data: VLResult[] }) {
   return (
     <div className="flex h-full divide-x border-t bg-background overflow-hidden font-sans">
       
-      {/* --- 左侧 Stream 列表 --- */}
+      {/* --- 左侧 Stream List --- */}
       <div className="w-[280px] flex flex-col bg-muted/5 flex-none border-r">
         <div className="p-2.5 border-b bg-muted/10 text-[10px] font-bold uppercase text-muted-foreground/70 tracking-widest flex items-center">
           <Layers className="w-3 h-3 mr-2 opacity-70" />
@@ -132,10 +129,10 @@ export function LogGroupView({ data }: { data: VLResult[] }) {
         </ScrollArea>
       </div>
 
-      {/* --- 右侧日志详情 --- */}
+      {/* --- 右侧LogDetail --- */}
       <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden">
         
-        {/* 工具栏: 显示当前流名称 + 字段切换 */}
+        {/* 工具栏: 显示当前流Name + 字段切换 */}
         <div className="p-1 border-b bg-muted/10 flex items-center justify-between px-4 h-9 shrink-0">
            <div className="flex items-center gap-2 min-w-0">
              <ListFilter className="w-3 h-3 text-primary" />
@@ -176,7 +173,7 @@ export function LogGroupView({ data }: { data: VLResult[] }) {
            </Popover>
         </div>
 
-        {/* 虚拟滚动列表 */}
+        {/* 虚拟滚动List */}
         <div ref={detailParentRef} className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/20">
            <div
              className="relative w-full"
@@ -190,7 +187,7 @@ export function LogGroupView({ data }: { data: VLResult[] }) {
                  className="absolute top-0 left-0 w-full"
                  style={{ transform: `translateY(${virtualRow.start}px)` }}
                >
-                 {/* 确保 LogEntryItem 能接收 visibleColumns 并动态渲染 */}
+                 {/* 确保 LogEntryItem 能Receive visibleColumns 并动态渲染 */}
                  <LogEntryItem 
                    log={activeGroup!.logs[virtualRow.index]} 
                    visibleColumns={visibleColumns} 

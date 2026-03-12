@@ -20,8 +20,7 @@ interface CollectorDialogProps {
   onToggleSource: (type: string) => void;
   onUpdateSourceConfig: (type: string, field: 'event_ids_str' | 'query', value: string) => void;
   onPresetClick: (source: DataSource, presetIds: string) => void;
-  onUpdateSourcePath: (type: string, newPath: string) => void; // 新增属性
-  onSubmit: () => void;
+  onUpdateSourcePath: (type: string, newPath: string) => void; // New增属性 - : () => void;
   submitting: boolean;
 }
 
@@ -98,7 +97,7 @@ export function CollectorDialog({
                           {source.label}
                         </Label>
                         
-                        {/* 【核心UI变身逻辑】：如果勾选了，且不是 Windows EventLog，则显示为可编辑输入框 */}
+                        {/* 【核心UI变身逻辑】：如果勾选了，且不是 Windows EventLog，则显示为可EditInput框 */}
                         {source.enabled && formData.type !== "windows" ? (
                           <Input 
                             value={source.path}
@@ -114,7 +113,7 @@ export function CollectorDialog({
                       </div>
                     </div>
 
-                    {/* Windows 专有的 EventID / XPath 过滤面板 */}
+                    {/* Windows 专有的 EventID / XPath FilterPanel */}
                     {source.enabled && formData.type === "windows" && (
                       <div className="mt-3 ml-7 pl-3 border-l-2 border-primary/20 space-y-3 animate-in slide-in-from-top-1 fade-in duration-200">
                         <div className="grid gap-1.5">

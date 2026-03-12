@@ -1,4 +1,4 @@
-//go:build windows
+//  go:build windows
 
 package collector
 
@@ -65,15 +65,13 @@ func (c *WindowsCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
 			continue
 		}
 
-		// =========================================================================
-		// 动态生成高性能底层 XPath 过滤语句 (让 Windows 内核帮我们过滤噪音)
-		// =========================================================================
-		timeDiffMs := (c.cfg.Interval + 2) * 1000 // 冗余2秒防止漏漏
-
-		var queryStr string
+		//   =========================================================================
+		// 动态生成HighPerformance底层 - Filter语句 (让 Windows 内核帮我们Filter噪音)
+		//   =========================================================================
+		timeDiffMs := (c.cfg.Interval + 2) * 1000 // 冗余2秒防止漏漏 - queryStr string
 
 		if len(source.EventIDs) > 0 {
-			// 1. 如果前端配置了 EventID 列表，生成精确匹配的 XPath
+			//   1. 如果前端Config了 EventID List，生成精确匹配的 XPath
 			var idConditions []string
 			for _, id := range source.EventIDs {
 				idConditions = append(idConditions, fmt.Sprintf("EventID=%d", id))
@@ -81,19 +79,19 @@ func (c *WindowsCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
 			queryStr = fmt.Sprintf(`*[System[(%s) and TimeCreated[timediff(@SystemTime) <= %d]]]`, strings.Join(idConditions, " or "), timeDiffMs)
 
 		} else if source.Query != "" {
-			// 2. 如果配置了高级自定义 Query，直接嵌入
+			//   2. 如果Config了High级自定义 Query，直接嵌入
 			queryStr = fmt.Sprintf(`*[System[(%s) and TimeCreated[timediff(@SystemTime) <= %d]]]`, source.Query, timeDiffMs)
 
 		} else {
-			// 3. 默认全量采集：不限制 EventID，只做时间切片
+			//   3. 默认全量Collect：不Limit EventID，只做Time切片
 			queryStr = fmt.Sprintf(`*[System[TimeCreated[timediff(@SystemTime) <= %d]]]`, timeDiffMs)
 		}
 
-		// 将 Go string 转换为 Windows C-String (UTF-16)
+		// 将 - string Convert为 Windows C-String (UTF-16)
 		channel16, _ := syscall.UTF16PtrFromString(source.Path)
 		query16, _ := syscall.UTF16PtrFromString(queryStr)
 
-		// 调用 Win32 原生 API 进行极速查询
+		// 调用 - 原生 API 进行极速Query
 		handle, _, _ := procEvtQuery.Call(
 			0,
 			uintptr(unsafe.Pointer(channel16)),
@@ -102,7 +100,7 @@ func (c *WindowsCollector) Collect() ([]ocsf.VSentryOCSFEvent, error) {
 		)
 
 		if handle == 0 {
-			continue // 可能权限不足(如非Admin读Security)或通道不存在
+			continue // 可能Insufficient - (如非Admin读Security)或通道不存在
 		}
 
 		events := c.fetchEvents(handle, source)
@@ -123,8 +121,7 @@ func (c *WindowsCollector) fetchEvents(handle uintptr, source config.SourceConfi
 			handle,
 			uintptr(10),
 			uintptr(unsafe.Pointer(&events[0])),
-			uintptr(2000), // 超时 2000ms
-			uintptr(0),
+			uintptr(2000), // Timeout - uintptr(0),
 			uintptr(unsafe.Pointer(&returned)),
 		)
 
@@ -135,12 +132,11 @@ func (c *WindowsCollector) fetchEvents(handle uintptr, source config.SourceConfi
 		for i := 0; i < int(returned); i++ {
 			var bufferUsed, propCount uint32
 
-			// 第一次调用获取所需的内存大小
-			procEvtRender.Call(0, events[i], uintptr(EvtRenderEventXml), 0, 0, uintptr(unsafe.Pointer(&bufferUsed)), uintptr(unsafe.Pointer(&propCount)))
+			// 第一次调用Get所需的内存大小 - .Call(0, events[i], uintptr(EvtRenderEventXml), 0, 0, uintptr(unsafe.Pointer(&bufferUsed)), uintptr(unsafe.Pointer(&propCount)))
 
 			buf := make([]uint16, bufferUsed)
 
-			// 第二次调用真正将 XML 渲染到内存中
+			// 第二次调用真正将 - 渲染到内存Medium
 			procEvtRender.Call(0, events[i], uintptr(EvtRenderEventXml), uintptr(bufferUsed), uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&bufferUsed)), uintptr(unsafe.Pointer(&propCount)))
 
 			xmlStr := syscall.UTF16ToString(buf)
@@ -148,7 +144,7 @@ func (c *WindowsCollector) fetchEvents(handle uintptr, source config.SourceConfi
 				logs = append(logs, *entry)
 			}
 
-			procEvtClose.Call(events[i]) // 防内存泄漏：必须关闭事件句柄
+			procEvtClose.Call(events[i]) //   防内存泄漏：MustCloseEvent句柄
 		}
 	}
 	return logs
@@ -167,9 +163,9 @@ func (c *WindowsCollector) parseXmlToLog(xmlStr string, source config.SourceConf
 
 	sevName, sevID := c.mapLevel(evt.System.Level)
 
-	// =========================================================================
-	// 全量提取 XML 内的所有参数并打平放入 unmapped
-	// =========================================================================
+	//   =========================================================================
+	// 全量提取 - 内的所有Parameter并打平放入 unmapped
+	//   =========================================================================
 	unmapped := map[string]interface{}{
 		"event_id": evt.System.EventID,
 		"channel":  evt.System.Channel,
@@ -182,7 +178,7 @@ func (c *WindowsCollector) parseXmlToLog(xmlStr string, source config.SourceConf
 		}
 	}
 
-	// 构造 OCSF 基础骨架 (默认当成一般 System Event)
+	// 构造 - 基础骨架 (默认当成一般 System Event)
 	entry := &ocsf.VSentryOCSFEvent{
 		Time:         t.Format(time.RFC3339),
 		CategoryName: ocsf.CategorySystem,
@@ -200,9 +196,9 @@ func (c *WindowsCollector) parseXmlToLog(xmlStr string, source config.SourceConf
 		Unmapped: unmapped,
 	}
 
-	// =========================================================================
-	// 将组装好的基础 entry 和全部字典丢给大一统的 Mapper 引擎进行深度加工
-	// =========================================================================
+	//   =========================================================================
+	// 将Group装好的基础 - Sum全部字典丢给大一统的 Mapper Engine进行深度加工
+	//   =========================================================================
 	mapper.Enrich(evt.System.EventID, unmapped, entry)
 
 	return entry

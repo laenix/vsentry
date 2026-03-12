@@ -11,23 +11,22 @@ import (
 	"gorm.io/gorm"
 )
 
-// ListRules 获取规则列表
-func ListRules(ctx *gin.Context) {
+// ListRules - func ListRules(ctx *gin.Context) {
 	db := database.GetDB()
 	var rules []model.Rule
 
-	// 建议增加预加载(Preload)处理关联标签，如果有的话
+	//   建议增加预Load(Preload)Handle关联标签，如果有的话
 	if err := db.Find(&rules).Error; err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "查询规则失败"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "QueryRuleFailed"})
 		return
 	}
 
-	// 调试：打印第一个 rule 的 ID
+	//   Debug：打印第一个 rule 的 ID
 	if len(rules) > 0 {
 		fmt.Printf("DEBUG: First rule ID = %d, Name = %s\n", rules[0].ID, rules[0].Name)
 	}
 
-	// 转换为 RuleResponse 以确保 id 字段正确
+	// Convert为 - 以确保 id 字段正确
 	ruleResponses := make([]model.RuleResponse, len(rules))
 	for i, r := range rules {
 		fmt.Printf("DEBUG converting rule %d: ID=%d\n", i, r.ID)
@@ -41,127 +40,119 @@ func ListRules(ctx *gin.Context) {
 	})
 }
 
-// AddRule 添加新规则
-func AddRule(ctx *gin.Context) {
+// AddRule - func AddRule(ctx *gin.Context) {
 	var rule model.Rule
 	if err := ctx.ShouldBindJSON(&rule); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数格式错误"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "ParameterFormat error"})
 		return
 	}
 
-	// 核心验证：规则名称和查询语句不能为空
+	//   核心Validate：RuleNameSumQuery语句Cannot为空
 	if rule.Name == "" || rule.Query == "" {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "规则名称和查询语句不能为空"})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "RuleNameSumQuery语句Cannot为空"})
 		return
 	}
 
-	// 自动设置初始元数据
-	rule.Version = 1
+	// 自动Settings初始元Data - .Version = 1
 	rule.Enabled = true
-	// 默认规则类型为报警规则
-	if rule.Type == "" {
+	// 默认RuleType为报警Rule - rule.Type == "" {
 		rule.Type = "alert"
 	}
 
-	// 从中间件获取当前操作人 ID
-	userId, exists := ctx.Get("userid")
+	// 从Medium间件Get当前操作人 - userId, exists := ctx.Get("userid")
 	if exists {
 		rule.AuthorID = userId.(uint)
 	}
 
 	db := database.GetDB()
 	if err := db.Create(&rule).Error; err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "创建规则失败"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "CreateRuleFailed"})
 		return
 	}
 	scheduler.GlobalEngine.ReloadRules()
 
-	// 如果启用了回溯，立即触发一次回溯
+	//   如果Enable了回溯，立即触发一次回溯
 	if rule.EnableBacktrace && rule.Type == "alert" {
 		go scheduler.TriggerBacktrace(rule.ID)
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "规则添加成功", "data": rule})
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "RuleAddSuccess", "data": rule})
 }
 
-// UpdateRule 更新现有规则
-func UpdateRule(ctx *gin.Context) {
+// UpdateRule - func UpdateRule(ctx *gin.Context) {
 	var req model.Rule
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数解析失败"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "ParameterParseFailed"})
 		return
 	}
 
 	if req.ID == 0 {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "规则 ID 不能为空"})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "Rule ID Cannot为空"})
 		return
 	}
 
 	db := database.GetDB()
 	var existing model.Rule
 
-	// 开启事务处理：版本自增和属性更新
+	//   开启事务Handle：Version自增Sum属性Update
 	err := db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.First(&existing, req.ID).Error; err != nil {
 			return err
 		}
 
-		// 增加版本号
-		req.Version = existing.Version + 1
+		// 增加Version号 - .Version = existing.Version + 1
 
-		// 记录修改人
-		if userId, exists := ctx.Get("userid"); exists {
+		// 记录修改人 - userId, exists := ctx.Get("userid"); exists {
 			req.AuthorID = userId.(uint)
 		}
 
-		// 使用 Select 指定允许更新的字段，防止恶意覆盖元数据
+		// 使用 - 指定AllowUpdate的字段，防止恶意覆盖元Data
 		return tx.Model(&existing).Select("Name", "Description", "Query", "Interval", "Severity", "Version", "AuthorID", "Type", "EnableBacktrace", "BacktraceCron", "BacktraceStart").Updates(req).Error
 	})
 
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "未找到该规则"})
+		if err == gorm.ErrRecordNot found {
+			ctx.JSON(http.StatusNot found, gin.H{"code": 404, "msg": "未找到该Rule"})
 		} else {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "更新失败"})
+			ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Update failed"})
 		}
 		return
 	}
 	scheduler.GlobalEngine.ReloadRules()
 
-	// 如果启用了回溯（新增或修改），立即触发一次回溯
+	//   如果Enable了回溯（New增或修改），立即触发一次回溯
 	if req.EnableBacktrace && req.Type == "alert" && req.Enabled {
 		go scheduler.TriggerBacktrace(req.ID)
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "规则更新成功"})
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "RuleUpdateSuccess"})
 }
 
-// DeleteRule 删除规则
-func DeleteRule(ctx *gin.Context) {
+// DeleteRule - func DeleteRule(ctx *gin.Context) {
 	id := ctx.Query("id")
 	if id == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "缺少 ID 参数"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "缺少 ID Parameter"})
 		return
 	}
 
 	db := database.GetDB()
-	// 硬删除规则，如果是生产环境建议在 model 中加入 gorm.DeletedAt 实现软删除
+	//   硬DeleteRule，如果是ProductionEnvironment建议在 model Medium加入 gorm.DeletedAt 实现软Delete
 	if err := db.Delete(&model.Rule{}, id).Error; err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "删除失败"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Deletion failed"})
 		return
 	}
 	scheduler.GlobalEngine.ReloadRules()
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "规则删除成功"})
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "RuleDeleteSuccess"})
 }
 
-// SetRuleStatus 统一处理启用/禁用逻辑
+// SetRuleStatus - /Disable逻辑
 func SetRuleStatus(ctx *gin.Context, enabled bool) {
 	type StatusRequest struct {
 		ID uint `json:"id"`
 	}
 	var req StatusRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "缺少 ID 参数"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "缺少 ID Parameter"})
 		return
 	}
 
@@ -169,21 +160,21 @@ func SetRuleStatus(ctx *gin.Context, enabled bool) {
 	result := db.Model(&model.Rule{}).Where("id = ?", req.ID).Update("enabled", enabled)
 
 	if result.Error != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "状态更新失败"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "StatusUpdate failed"})
 		return
 	}
 
 	if result.RowsAffected == 0 {
-		ctx.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "规则不存在"})
+		ctx.JSON(http.StatusNot found, gin.H{"code": 404, "msg": "Rule不存在"})
 		return
 	}
 
-	statusMsg := "启用"
+	statusMsg := "Enable"
 	if !enabled {
-		statusMsg = "禁用"
+		statusMsg = "Disable"
 	}
 	scheduler.GlobalEngine.ReloadRules()
-	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "规则" + statusMsg + "成功"})
+	ctx.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Rule" + statusMsg + "Success"})
 }
 
 func EnableRule(ctx *gin.Context) {

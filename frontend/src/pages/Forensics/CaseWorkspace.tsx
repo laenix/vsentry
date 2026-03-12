@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { forensicsService, type ForensicTask, type ForensicFile } from "@/services/forensics";
-import { useTabStore } from "@/stores/tab-store"; // ✅ 引入 Tab 仓库，用于跳转日志分析
+import { useTabStore } from "@/stores/tab-store"; //   ✅ 引入 Tab 仓库，用于跳转Log分析
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,12 +32,12 @@ export function CaseWorkspace({ caseId, onBack }: CaseWorkspaceProps) {
     }
   };
 
-  // 1. 初始化加载
+  //   1. 初始化Load
   useEffect(() => {
     fetchTaskDetails();
   }, [caseId]);
 
-  // 2. 智能轮询引擎：如果发现有文件处于 pending 或 parsing 状态，每 3 秒刷新一次
+  //   2. 智能轮询Engine：如果发现有File处于 pending 或 parsing Status，每 3 秒Refresh一次
   useEffect(() => {
     if (!task || !task.files) return;
     
@@ -48,13 +48,11 @@ export function CaseWorkspace({ caseId, onBack }: CaseWorkspaceProps) {
     }
   }, [task]);
 
-  // 触发隐藏的文件选择器
-  const triggerUpload = () => {
+  // 触发隐藏的FileSelect器 - triggerUpload = () => {
     fileInputRef.current?.click();
   };
 
-  // 处理文件上传
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // HandleFileUpload - handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
@@ -63,13 +61,12 @@ export function CaseWorkspace({ caseId, onBack }: CaseWorkspaceProps) {
     try {
       await forensicsService.uploadFile(caseId, file);
       toast.success("File uploaded, parsing started.");
-      fetchTaskDetails(); // 立即刷新列表看状态
+      fetchTaskDetails(); //   立即RefreshList看Status
     } catch (err: any) {
       toast.error("Upload failed", { description: err.message });
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = ""; // 重置 input
-    }
+      if (fileInputRef.current) fileInputRef.current.value = ""; // 重置 - }
   };
 
   const handleDeleteFile = async (fileId: number) => {
@@ -83,8 +80,7 @@ export function CaseWorkspace({ caseId, onBack }: CaseWorkspaceProps) {
     }
   };
 
-  // 跳转到取证调查页面
-  const handleAnalyze = (file: ForensicFile) => {
+  // 跳转到ForensicsInvestigation页面 - handleAnalyze = (file: ForensicFile) => {
     addTab('forensic_investigation', `Analysis: ${file.original_name}`, {
       case_id: caseId,
       file_id: file.id,
@@ -93,23 +89,21 @@ export function CaseWorkspace({ caseId, onBack }: CaseWorkspaceProps) {
     });
   };
 
-  // ✅ 核心联动：一键跳转 LogSQL 查询
+  //   ✅ 核心联动：一键跳转 LogSQL Query
   const handleHuntInSandbox = () => {
-    // VictoriaLogs LogSQL 语法：使用冒号 : 分隔字段和值，| 表示 OR
+    // VictoriaLogs - 语法：使用冒号 : 分隔字段Sum值，| 表示 OR
     const sandboxQuery = `env:forensics | task_id:${caseId}`;
     addTab('logs', `Hunt: ${task?.name}`, { query: sandboxQuery });
   };
 
   if (!task) return <div className="p-6 flex items-center justify-center h-full"><Loader2 className="animate-spin text-primary" /></div>;
 
-  // 辅助渲染文件图标
-  const getFileIcon = (type: string) => {
+  // 辅助渲染File图标 - getFileIcon = (type: string) => {
     if (type.includes('pcap')) return <Network className="w-4 h-4 text-blue-500" />;
     return <FileText className="w-4 h-4 text-slate-500" />;
   };
 
-  // 辅助渲染状态 Badge
-  const getStatusBadge = (status: string) => {
+  // 辅助渲染Status - const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed': return <Badge variant="outline" className="border-green-200 text-green-600 bg-green-50"><CheckCircle2 className="w-3 h-3 mr-1"/> Completed</Badge>;
       case 'failed': return <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100 border-none"><AlertCircle className="w-3 h-3 mr-1"/> Failed</Badge>;
@@ -204,7 +198,7 @@ export function CaseWorkspace({ caseId, onBack }: CaseWorkspaceProps) {
                           {file.event_count > 0 ? file.event_count : "-"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {/* 分析按钮 - 仅解析完成的文件可分析 */}
+                          {/* 分析Button - 仅Parse完成的File可分析 */}
                           {file.parse_status === 'completed' && file.event_count > 0 && (
                             <Button 
                               variant="ghost" 

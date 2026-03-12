@@ -16,23 +16,22 @@ func NewEngine() *Engine {
 	return &Engine{}
 }
 
-// Run 是剧本执行的核心入口
-func (e *Engine) Run(playbookID uint, inputContext map[string]interface{}) (uint, error) {
+// Run - func (e *Engine) Run(playbookID uint, inputContext map[string]interface{}) (uint, error) {
 	db := database.GetDB()
 
-	// 1. 获取剧本定义
+	//   1. GetPlaybook定义
 	var playbook model.Playbook
 	if err := db.First(&playbook, playbookID).Error; err != nil {
 		return 0, fmt.Errorf("playbook not found: %v", err)
 	}
 
-	// 2. 解析 React Flow 定义
+	//   2. Parse React Flow 定义
 	var def WorkflowDefinition
 	if err := json.Unmarshal(playbook.Definition, &def); err != nil {
 		return 0, fmt.Errorf("invalid definition: %v", err)
 	}
 
-	// 3. 创建执行记录
+	//   3. CreateExecute记录
 	execution := model.PlaybookExecution{
 		PlaybookID: playbookID,
 		Status:     "running",
@@ -41,8 +40,8 @@ func (e *Engine) Run(playbookID uint, inputContext map[string]interface{}) (uint
 	}
 	db.Create(&execution)
 
-	// 4. 初始化上下文
-	// 无论 manual 还是 incident 触发，统一将初始数据放入 Global
+	//   4. 初始化上下文
+	// 无论 - 还是 incident 触发，统一将初始Data放入 Global
 	ctx := &ExecutionContext{
 		PlaybookID:  playbookID,
 		ExecutionID: execution.ID,
@@ -50,7 +49,7 @@ func (e *Engine) Run(playbookID uint, inputContext map[string]interface{}) (uint
 		Steps:       make(map[string]StepResult),
 	}
 
-	// 5. 构建节点索引与邻接表
+	//   5. 构建Node索引与邻接表
 	nodeMap := make(map[string]Node)
 	for _, n := range def.Nodes {
 		nodeMap[n.ID] = n
@@ -60,7 +59,7 @@ func (e *Engine) Run(playbookID uint, inputContext map[string]interface{}) (uint
 		adj[edge.Source] = append(adj[edge.Source], edge)
 	}
 
-	// 6. 查找起点 (Trigger 节点)
+	//   6. 查找起点 (Trigger Node)
 	var startNode *Node
 	for _, n := range def.Nodes {
 		if n.Data.Type == "trigger" {
@@ -73,7 +72,7 @@ func (e *Engine) Run(playbookID uint, inputContext map[string]interface{}) (uint
 		return execution.ID, fmt.Errorf("no trigger node")
 	}
 
-	// 7. 执行逻辑 (单线程 BFS，支持分支选择)
+	//   7. Execute逻辑 (单线程 BFS，支持分支Select)
 	queue := []string{startNode.ID}
 	executedLogs := make(map[string]StepResult)
 	visited := make(map[string]bool)
@@ -89,12 +88,11 @@ func (e *Engine) Run(playbookID uint, inputContext map[string]interface{}) (uint
 
 		currNode := nodeMap[currID]
 
-		// 执行当前节点
-		result := e.executeNode(currNode, ctx)
+		// Execute当前Node - := e.executeNode(currNode, ctx)
 		ctx.Steps[currID] = result
 		executedLogs[currID] = result
 
-		// 实时更新数据库日志，便于前端轮询详情
+		//   实时UpdateDatabaseLog，便于前端轮询Detail
 		logBytes, _ := json.Marshal(executedLogs)
 		db.Model(&execution).Update("logs", logBytes)
 
@@ -103,11 +101,10 @@ func (e *Engine) Run(playbookID uint, inputContext map[string]interface{}) (uint
 			return execution.ID, nil
 		}
 
-		// 寻找下一跳
-		edges := adj[currID]
+		// 寻找下一跳 - := adj[currID]
 		for _, edge := range edges {
 			if currNode.Data.Type == "condition" {
-				// 处理 Condition 分支跳转
+				// Handle - 分支跳转
 				boolRes, _ := result.Output.(bool)
 				if fmt.Sprintf("%v", boolRes) == edge.SourceHandle {
 					queue = append(queue, edge.Target)
@@ -123,27 +120,24 @@ func (e *Engine) Run(playbookID uint, inputContext map[string]interface{}) (uint
 }
 
 func (e *Engine) executeNode(node Node, ctx *ExecutionContext) StepResult {
-	// 调用 variable.go 中的 ResolveVariables 处理配置中的 {{...}}
+	// 调用 - .go Medium的 ResolveVariables HandleConfigMedium的 {{...}}
 	resolvedConfig, err := ResolveVariables(node.Data.Config, ctx)
 	if err != nil {
 		return StepResult{Status: "failed", Error: err.Error()}
 	}
 
-	// 动作分发
-	switch node.Data.Type {
+	// Action分发 - node.Data.Type {
 	case "trigger":
-		// Trigger 节点将全局上下文作为输出
-		return StepResult{Status: "success", Output: ctx.Global}
+		// Trigger - return StepResult{Status: "success", Output: ctx.Global}
 	case "http_request":
 		return RunHTTPRequest(resolvedConfig)
 	case "send_email":
 		return RunSendEmail(resolvedConfig)
 	case "expression":
-		// 运行 Pro-Code 表达式节点
+		// Run - -Code ExpressionNode
 		return RunExpression(resolvedConfig, ctx)
 	case "condition":
-		// 运行条件判断节点
-		return RunCondition(resolvedConfig, ctx)
+		// RunCondition判断Node - RunCondition(resolvedConfig, ctx)
 	default:
 		return StepResult{Status: "failed", Error: "Unknown node type: " + node.Data.Type}
 	}

@@ -8,49 +8,49 @@ interface LogHitsChartProps {
 
 export function LogHitsChart({ data }: LogHitsChartProps) {
   const { buckets, streams, maxTotal, startTime, endTime } = useMemo(() => {
-    // ✅ 修复崩溃核心：
-    // 1. 如果没有数据，返回空
-    // 2. 如果第一条数据没有 _time 字段（说明是 stats/uniq 等聚合查询结果），无法画时间分布图，直接返回空
+    //   ✅ 修复崩溃核心：
+    //   1. 如果没有Data，Return空
+    //   2. 如果第一条Data没有 _time 字段（说明是 stats/uniq 等聚合Query结果），Unable to画Time分布图，直接Return空
     if (!data || data.length === 0 || !data[0]._time) {
       return { buckets: [], streams: [], maxTotal: 0, startTime: "", endTime: "" };
     }
 
-    // 过滤掉时间无效的脏数据，防止计算 NaN
+    //   Filter掉TimeInvalid脏Data，防止计算 NaN
     const validData = data.filter(d => d._time && !isNaN(new Date(d._time).getTime()));
     
     if (validData.length === 0) {
       return { buckets: [], streams: [], maxTotal: 0, startTime: "", endTime: "" };
     }
 
-    // --- 以下逻辑使用 validData 而不是 data ---
+    //   --- 以下逻辑使用 validData 而不是 data ---
 
     const timestamps = validData.map(d => new Date(d._time).getTime()).sort((a, b) => a - b)
     const min = timestamps[0]
     const max = timestamps[timestamps.length - 1]
     const range = max - min || 1
-    const bucketCount = 80 // 对标 vmui 的精细度
+    const bucketCount = 80 // 对标 - 的精细度
 
-    // 1. 提取所有流并分配颜色 (对标 vmui)
+    //   1. 提取所有流并分配颜色 (对标 vmui)
     const streamSet = new Set<string>()
     validData.forEach(d => streamSet.add(d._stream || "{}"))
     const streams = Array.from(streamSet).map((s, i) => ({
       name: s,
-      color: `hsl(${(i * 137.5) % 360}, 60%, 65%)` // 自动生成互补色
+      color: `hsl(${(i * 137.5) % 360}, 60%, 65%)` //   自动生成互补色
     }))
 
-    // 2. 初始化桶
+    //   2. 初始化桶
     const buckets = Array.from({ length: bucketCount }).map(() => ({
       counts: {} as Record<string, number>,
       total: 0
     }))
 
-    // 3. 填充数据 (堆叠逻辑)
+    //   3. 填充Data (堆叠逻辑)
     validData.forEach(d => {
       const ts = new Date(d._time).getTime()
-      // 确保 bIdx 在 0 ~ bucketCount-1 范围内
+      // 确保 - 在 0 ~ bucketCount-1 范围内
       const bIdx = Math.min(Math.floor(((ts - min) / range) * bucketCount), bucketCount - 1)
       
-      // 双重保险：虽然上面过滤了，但防止极端浮点数误差导致 bIdx 越界
+      //   双重保险：虽然上面Filter了，但防止极端浮点数误差导致 bIdx 越界
       if (buckets[bIdx]) {
         const sName = d._stream || "{}"
         buckets[bIdx].counts[sName] = (buckets[bIdx].counts[sName] || 0) + 1
@@ -67,7 +67,7 @@ export function LogHitsChart({ data }: LogHitsChartProps) {
     }
   }, [data])
 
-  // 如果没有有效的分桶数据，不渲染任何内容 (比如聚合查询时)
+  //   如果没有有效的分桶Data，不渲染任何内容 (比如聚合Query时)
   if (buckets.length === 0) return null
 
   return (
@@ -123,7 +123,7 @@ export function LogHitsChart({ data }: LogHitsChartProps) {
         ))}
       </div>
 
-      {/* 5. 横坐标时间 */}
+      {/* 5. 横坐标Time */}
       <div className="flex justify-between mt-1 text-[8px] text-muted-foreground/60 font-mono">
         <span>{startTime}</span>
         <span>Timeline (Distribution by _stream)</span>
@@ -133,7 +133,7 @@ export function LogHitsChart({ data }: LogHitsChartProps) {
       {/* 6. 图例区域 (对标 vmui 底部图例) */}
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t pt-2">
         {streams.map(s => {
-          // 使用原始 data 计算总数，而不是 validData，保证图例数字匹配表格
+          // 使用原始 - 计算Total，而不是 validData，保证图例数字匹配Table
           const count = data.filter(d => (d._stream || "{}") === s.name).length
           return (
             <div key={s.name} className="flex items-center gap-1.5 no-shrink">

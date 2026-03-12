@@ -11,31 +11,29 @@ import (
 
 func CollectRouter(r *gin.Engine) *gin.Engine {
 
-	// 托管前端静态文件
-	staticPath := os.Getenv("STATIC_PATH")
+	// 托管前端静态File - := os.Getenv("STATIC_PATH")
 	if staticPath == "" {
 		staticPath = "./dist"
 	}
 
-	// 尝试加载静态文件目录
-	if _, err := os.Stat(staticPath); err == nil {
+	// 尝试Load静态FileDirectory - _, err := os.Stat(staticPath); err == nil {
 		r.Use(gin.Logger())
 		r.Use(gin.Recovery())
 
-		// 静态文件服务 - Vite 构建的应用使用 /assets 路径
+		//   静态FileService - Vite 构建的Application使用 /assets Path
 		r.Static("/assets", staticPath+"/assets")
 		r.Static("/static", staticPath)
 
-		// API 路由需要 /api 前缀
+		// API - /api 前缀
 		api := r.Group("/api")
 		{
 			setupAPIRoutes(api)
 		}
 
-		// SPA Fallback: 所有非 API 路由都返回 index.html
+		// SPA - : 所有非 API 路由都Return index.html
 		r.NoRoute(func(c *gin.Context) {
 			path := c.Request.URL.Path
-			// 跳过 API 路径
+			// Skip - Path
 			if path == "/api" || len(path) > 5 && path[:4] == "/api" {
 				c.JSON(404, gin.H{"code": 404, "msg": "API not found"})
 				return
@@ -46,7 +44,7 @@ func CollectRouter(r *gin.Engine) *gin.Engine {
 		return r
 	}
 
-	// 如果没有静态文件，使用原来的 API 路由方式 (无 /api 前缀)
+	//   如果没有静态File，使用原来的 API 路由方式 (无 /api 前缀)
 	setupAPIRoutes(r.Group(""))
 
 	return r
@@ -59,28 +57,23 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 
 	r.POST("/login", controller.Login)
 
-	// user
-	user := r.Group("/user", middleware.AuthMiddleware())
+	// user - := r.Group("/user", middleware.AuthMiddleware())
 	{
 		user.POST("/userinfo", controller.Userinfo)
 		user.POST("/changepassword", controller.UserChangePassword)
 	}
-	// dashboard
-	r.GET("/dashboard", middleware.AuthMiddleware(), controller.GetDashboard)
-	// users
-	users := r.Group("/users", middleware.AuthMiddleware())
+	// dashboard - .GET("/dashboard", middleware.AuthMiddleware(), controller.GetDashboard)
+	// users - := r.Group("/users", middleware.AuthMiddleware())
 	{
 		users.GET("/list", controller.ListUser)
 		users.POST("/add", controller.AddUser)
 		users.POST("/delete", controller.DeleteUser)
 	}
-	// ingest
-	ingest := r.Group("/ingest", middleware.IngestMiddleware())
+	// ingest - := r.Group("/ingest", middleware.IngestMiddleware())
 	{
 		ingest.POST("/collect", controller.CollectIngest)
 	}
-	// ingest manager
-	ingestManager := r.Group("/ingestmanager", middleware.AuthMiddleware())
+	// ingest - ingestManager := r.Group("/ingestmanager", middleware.AuthMiddleware())
 	{
 		ingestManager.POST("/add", controller.AddIngest)
 		ingestManager.GET("/list", controller.ListIngest)
@@ -89,7 +82,7 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		ingestManager.GET("/auth/:id", controller.GetIngestAuth)
 	}
 
-	// connectors (third-party integrations)
+	//   connectors (third-party integrations)
 	connectors := r.Group("/connectors", middleware.AuthMiddleware())
 	{
 		connectors.GET("/list", controller.ListConnectors)
@@ -100,7 +93,7 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		connectors.POST("/test", controller.TestConnector)
 	}
 
-	// collectors (agent builders)
+	//   collectors (agent builders)
 	collectors := r.Group("/collectors", middleware.AuthMiddleware())
 	{
 		collectors.GET("/list", controller.ListCollectorConfigs)
@@ -110,13 +103,13 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		collectors.POST("/update", controller.UpdateCollectorConfig)
 		collectors.POST("/delete", controller.DeleteCollectorConfig)
 		collectors.POST("/build", controller.BuildCollector)
-		collectors.GET("/download", controller.DownloadCollector) // 增加这行，通常下载用 GET
+		collectors.GET("/download", controller.DownloadCollector) //   增加这行，通常Download用 GET
 	}
 
-	// config (public)
+	//   config (public)
 	r.GET("/config", controller.GetConfig)
 
-	// VictoriaLogs proxy endpoints - require authentication
+	// VictoriaLogs - endpoints - require authentication
 	victorialogs := r.Group("", middleware.AuthMiddleware())
 	{
 		victorialogs.POST("/select/logsql/query", controller.QueryVictoriaLogs)
@@ -125,8 +118,7 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		victorialogs.GET("/health", controller.GetVictoriaLogsHealth)
 	}
 
-	// custom tables
-	customTables := r.Group("/customtables", middleware.AuthMiddleware())
+	// custom - customTables := r.Group("/customtables", middleware.AuthMiddleware())
 	{
 		customTables.GET("/list", controller.ListCustomTables)
 		customTables.POST("/add", controller.AddCustomTable)
@@ -134,8 +126,7 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		customTables.POST("/delete", controller.DeleteCustomTable)
 	}
 
-	// rules
-	rules := r.Group("/rules", middleware.AuthMiddleware())
+	// rules - := r.Group("/rules", middleware.AuthMiddleware())
 	{
 		rules.GET("/list", controller.ListRules)
 		rules.POST("/add", controller.AddRule)
@@ -144,8 +135,7 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		rules.POST("/enable", controller.EnableRule)
 		rules.POST("/disable", controller.DisableRule)
 	}
-	// alerts
-	alerts := r.Group("/alerts", middleware.AuthMiddleware())
+	// alerts - := r.Group("/alerts", middleware.AuthMiddleware())
 	{
 		alerts.GET("/list", controller.ListAlerts)
 		alerts.POST("/acknowledge", controller.Acknowledge)
@@ -153,8 +143,7 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		alerts.POST("/assign", controller.Assign)
 	}
 
-	// incidents
-	incidentGroup := r.Group("/incidents", middleware.AuthMiddleware())
+	// incidents - := r.Group("/incidents", middleware.AuthMiddleware())
 	{
 		incidentGroup.GET("/list", controller.ListIncidents)
 		incidentGroup.GET("/detail", controller.GetIncidentDetail)
@@ -162,13 +151,11 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		incidentGroup.POST("/resolve", controller.ResolveIncident)
 	}
 
-	// investigation
-	investigationGroup := r.Group("/investigation", middleware.AuthMiddleware())
+	// investigation - := r.Group("/investigation", middleware.AuthMiddleware())
 	{
-		investigationGroup.POST("/execute", controller.ExecuteInvestigation) // 核心执行引擎
+		investigationGroup.POST("/execute", controller.ExecuteInvestigation) //   核心ExecuteEngine
 	}
-	// forensics
-	forensicsGroup := r.Group("/forensics", middleware.AuthMiddleware())
+	// forensics - := r.Group("/forensics", middleware.AuthMiddleware())
 	{
 		forensicsGroup.GET("/tasks", controller.ListForensicTasks)
 		forensicsGroup.POST("/tasks", controller.CreateForensicTask)
@@ -179,23 +166,14 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		forensicsGroup.DELETE("/files/:id", controller.DeleteForensicFile)
 		forensicsGroup.POST("/execute-rules", controller.ExecuteForensicRules)
 	}
-	// automation
-	automation := r.Group("/playbooks", middleware.AuthMiddleware())
+	// automation - := r.Group("/playbooks", middleware.AuthMiddleware())
 	{
-		automation.GET("", controller.ListPlaybooks)         // 列表
-		automation.POST("", controller.CreatePlaybook)       // 创建
-		automation.GET("/:id", controller.GetPlaybook)       // 详情
-		automation.PUT("/:id", controller.UpdatePlaybook)    // 更新
-		automation.DELETE("/:id", controller.DeletePlaybook) // 删除
-
-		automation.POST("/:id/bind-rules", controller.BindRulesToPlaybook)
+		automation.GET("", controller.ListPlaybooks)         // List - .POST("", controller.CreatePlaybook)       // Create - .GET("/:id", controller.GetPlaybook)       // Detail - .PUT("/:id", controller.UpdatePlaybook)    // Update - .DELETE("/:id", controller.DeletePlaybook) // Delete - .POST("/:id/bind-rules", controller.BindRulesToPlaybook)
 		automation.GET("/:id/rules", controller.GetBoundRules)
 		automation.DELETE("/:id/rules/:rule_id", controller.UnbindRuleFromPlaybook)
 
-		automation.POST("/:id/run", controller.RunPlaybook)               // 调试运行
-		automation.GET("/:id/executions", controller.GetExecutionHistory) // 历史记录
-		automation.GET("/executions/:exec_id", controller.GetExecutionDetail)
-		automation.GET("/executions", controller.ListAllExecutions) // 获取所有执行记录
+		automation.POST("/:id/run", controller.RunPlaybook)               // DebugRun - .GET("/:id/executions", controller.GetExecutionHistory) // 历史记录 - .GET("/executions/:exec_id", controller.GetExecutionDetail)
+		automation.GET("/executions", controller.ListAllExecutions) //   Get所有Execute记录
 
 	}
 }

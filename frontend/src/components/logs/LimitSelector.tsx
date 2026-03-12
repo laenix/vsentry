@@ -4,13 +4,12 @@ import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
-// 你自定义的配置
-const LIMIT_OPTIONS = [
+// 你自定义的Config - LIMIT_OPTIONS = [
   { label: "100", value: "100" },
-  { label: "1,000", value: "1000" }, // 默认推荐
+  { label: "1,000", value: "1000" }, //   默认推荐
   { label: "2,000", value: "2000" },
   { label: "5,000", value: "5000" },
-  { label: "10,000", value: "10000" }, // 新增的万级数据
+  { label: "10,000", value: "10000" }, //   New增的万级Data
 ]
 
 interface LimitSelectorProps {
@@ -26,8 +25,8 @@ export function LimitSelector({ value, onChange }: LimitSelectorProps) {
     setOpen(false)
   }
 
-  // ✅ 核心修复：优先查找对应的 Label 用于显示
-  // 这样选中 "1000" 时，按钮上会显示 "1,000" (带逗号)
+  //   ✅ 核心修复：优先查找对应的 Label 用于显示
+  //   这样选Medium "1000" 时，Button上会显示 "1,000" (带逗号)
   const displayLabel = useMemo(() => {
     const selected = LIMIT_OPTIONS.find(opt => opt.value === value)
     return selected ? selected.label : value
@@ -40,7 +39,7 @@ export function LimitSelector({ value, onChange }: LimitSelectorProps) {
           variant="outline" 
           size="sm" 
           className={cn(
-            // ✅ 调整宽度：min-w-[80px] 以容纳 "10,000 rows"
+            //   ✅ 调整宽度：min-w-[80px] 以容纳 "10,000 rows"
             "h-7 px-2 font-normal justify-start gap-2 bg-background border-border/60 hover:bg-accent transition-all min-w-[85px]",
             open && "border-primary/50 ring-1 ring-primary/20"
           )}
@@ -71,7 +70,7 @@ export function LimitSelector({ value, onChange }: LimitSelectorProps) {
                   : "hover:bg-muted text-foreground/80"
               )}
             >
-              {/* 下拉列表中也显示带格式的 Label */}
+              {/* 下拉ListMedium也显示带格式的 Label */}
               <span>{opt.label}</span>
               {value === opt.value && <Check className="w-3 h-3 opacity-100" />}
             </button>

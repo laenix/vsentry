@@ -5,13 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Edit, History, User, Filter } from "lucide-react"; // 新增图标
-import { toast } from "sonner";
+import { Plus, Trash2, Edit, History, User, Filter } from "lucide-react"; // New增图标 - { toast } from "sonner";
 import { RuleDialog } from "./RuleDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// 简单的日期格式化 helper
-const formatDate = (dateStr?: string) => {
+// 简单的DateFormat - const formatDate = (dateStr?: string) => {
   if (!dateStr) return "-";
   return new Date(dateStr).toLocaleString('en-US', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -25,8 +23,7 @@ export default function RulesPage() {
   const [editingRule, setEditingRule] = useState<DetectionRule | null>(null);
   const [typeFilter, setTypeFilter] = useState<RuleType | "all">("all");
 
-  // 根据类型筛选
-  const filteredRules = typeFilter === "all" 
+  // 根据Type筛选 - filteredRules = typeFilter === "all" 
     ? rules 
     : rules.filter(r => (r.type || "alert") === typeFilter);
 
@@ -34,7 +31,7 @@ export default function RulesPage() {
     try {
       const res = await ruleService.list();
       if (res.code === 200) {
-        // 兼容之前的 data.rules 结构逻辑
+        // 兼容之前的 - .rules 结构逻辑
         let list: DetectionRule[] = [];
         if (Array.isArray(res.data)) list = res.data;
         else if (res.data && Array.isArray(res.data.rules)) list = res.data.rules;
@@ -50,7 +47,7 @@ export default function RulesPage() {
 
   useEffect(() => { fetchRules(); }, []);
 
-  // 获取真实 ID (兼容大小写)
+  // Get真实 - (兼容大小写)
   const getRuleID = (rule: DetectionRule) => rule.ID || rule.id || 0;
 
   const toggleRule = async (rule: DetectionRule) => {
@@ -114,7 +111,7 @@ export default function RulesPage() {
               <TableHead>Type</TableHead>
               <TableHead>Query (LogSQL)</TableHead>
               <TableHead>Severity</TableHead>
-              {/* 新增列 */}
+              {/* New增列 */}
               <TableHead>Version</TableHead>
               <TableHead>Author</TableHead>
               <TableHead>Last Updated</TableHead>

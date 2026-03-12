@@ -13,16 +13,14 @@ import (
 	"github.com/laenix/vsentry/model"
 )
 
-// ListCollectorConfigs 获取采集器配置列表
-func ListCollectorConfigs(ctx *gin.Context) {
+// ListCollectorConfigs - func ListCollectorConfigs(ctx *gin.Context) {
 	db := database.GetDB()
 	var configs []model.CollectorConfig
 	db.Find(&configs)
 	ctx.JSON(200, gin.H{"code": 200, "data": configs})
 }
 
-// GetCollectorTemplates 获取采集器模板列表
-func GetCollectorTemplates(ctx *gin.Context) {
+// GetCollectorTemplates - func GetCollectorTemplates(ctx *gin.Context) {
 	templates := []map[string]interface{}{
 		{
 			"id":          "windows_event",
@@ -45,11 +43,11 @@ func GetCollectorTemplates(ctx *gin.Context) {
 			"description": "Collect macOS unified logging directly from the Apple log datastore.",
 			"icon":        "apple",
 		},
-		// 【新增】应用层通用采集模板，方便用户在界面上直接选择
+		//   【New增】Application层通用CollectTemplate，方便User在界面上直接Select
 		{
 			"id":          "app_layer",
 			"name":        "Application & Web Logs",
-			"type":        "linux", // 通常跑在 Linux 上，但由于我们的 AppCollector 是跨平台的，其实两边都能跑
+			"type":        "linux", // 通常跑在 - 上，但由于我们的 AppCollector 是跨平台的，其实两边都能跑
 			"description": "Collect Nginx, Apache, Tomcat, MySQL, and Redis logs via file tailing.",
 			"icon":        "server",
 		},
@@ -57,11 +55,10 @@ func GetCollectorTemplates(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{"code": 200, "data": templates})
 }
 
-// AddCollectorConfig 添加采集器配置
-func AddCollectorConfig(ctx *gin.Context) {
+// AddCollectorConfig - func AddCollectorConfig(ctx *gin.Context) {
 	var req model.CollectorConfig
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(400, gin.H{"msg": "参数错误"})
+		ctx.JSON(400, gin.H{"msg": "Parameter error"})
 		return
 	}
 
@@ -74,11 +71,10 @@ func AddCollectorConfig(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{"code": 200, "msg": "Created successfully", "data": req})
 }
 
-// UpdateCollectorConfig 更新采集器配置
-func UpdateCollectorConfig(ctx *gin.Context) {
+// UpdateCollectorConfig - func UpdateCollectorConfig(ctx *gin.Context) {
 	var req model.CollectorConfig
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(400, gin.H{"msg": "参数错误"})
+		ctx.JSON(400, gin.H{"msg": "Parameter error"})
 		return
 	}
 
@@ -97,18 +93,16 @@ func UpdateCollectorConfig(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{"code": 200, "msg": "Updated successfully"})
 }
 
-// DeleteCollectorConfig 删除采集器配置
-func DeleteCollectorConfig(ctx *gin.Context) {
+// DeleteCollectorConfig - func DeleteCollectorConfig(ctx *gin.Context) {
 	id := ctx.Query("id")
 	database.GetDB().Delete(&model.CollectorConfig{}, id)
 	ctx.JSON(200, gin.H{"code": 200, "msg": "Deleted successfully"})
 }
 
-// GetAvailableChannels 获取指定类型可用的采集通道及过滤预设
-func GetAvailableChannels(ctx *gin.Context) {
+// GetAvailableChannels - func GetAvailableChannels(ctx *gin.Context) {
 	collectorType := ctx.Query("type")
 
-	// 使用 map[string]interface{} 以支持嵌套的 presets 数组
+	// 使用 - [string]interface{} 以支持嵌套的 presets 数Group
 	channels := map[string][]map[string]interface{}{
 		"windows": {
 			{
@@ -157,12 +151,11 @@ func GetAvailableChannels(ctx *gin.Context) {
 			},
 		},
 		"linux": {
-			// OS 层日志
-			{"type": "syslog", "path": "/var/log/syslog", "label": "Syslog (OS)"},
+			// OS - {"type": "syslog", "path": "/var/log/syslog", "label": "Syslog (OS)"},
 			{"type": "auth", "path": "/var/log/auth.log", "label": "Auth Log (SSH)"},
 			{"type": "secure", "path": "/var/log/secure", "label": "Secure Log (RedHat)"},
 
-			// 【新增】Web 容器日志
+			//   【New增】Web ContainerLog
 			{"type": "nginx_access", "path": "/var/log/nginx/access.log", "label": "Nginx Access Log"},
 			{"type": "nginx_error", "path": "/var/log/nginx/error.log", "label": "Nginx Error Log"},
 			{"type": "apache_access", "path": "/var/log/apache2/access.log", "label": "Apache Access Log"},
@@ -170,7 +163,7 @@ func GetAvailableChannels(ctx *gin.Context) {
 			{"type": "tomcat_access", "path": "/opt/tomcat/logs/localhost_access_log.txt", "label": "Tomcat Access Log"},
 			{"type": "tomcat_catalina", "path": "/opt/tomcat/logs/catalina.out", "label": "Tomcat Catalina Log"},
 
-			// 【新增】数据库日志
+			//   【New增】DatabaseLog
 			{"type": "mysql_error", "path": "/var/log/mysql/error.log", "label": "MySQL Error Log"},
 			{"type": "redis_log", "path": "/var/log/redis/redis-server.log", "label": "Redis Log"},
 		},
@@ -187,15 +180,14 @@ func GetAvailableChannels(ctx *gin.Context) {
 	}
 }
 
-// 定义编译产物的全局存储目录
-const BuildOutputDir = "./data/builds"
+// 定义编译产物的全局StorageDirectory - BuildOutputDir = "./data/builds"
 
 func init() {
-	// 确保程序启动时，构建目录存在
+	//   确保程序Start时，构建Directory存在
 	os.MkdirAll(BuildOutputDir, 0755)
 }
 
-// BuildCollector 触发编译跨平台采集器 (仅编译，不下载)
+// BuildCollector - (仅编译，不Download)
 func BuildCollector(ctx *gin.Context) {
 	id := ctx.Query("id")
 	if id == "" {
@@ -212,7 +204,7 @@ func BuildCollector(ctx *gin.Context) {
 
 	var endpoint, token, streamFields string
 
-	// 提取 Ingest 凭证
+	// 提取 - 凭证
 	if config.IngestID > 0 {
 		var ingest model.Ingest
 		var auth model.IngestAuth
@@ -225,23 +217,23 @@ func BuildCollector(ctx *gin.Context) {
 		}
 	}
 
-	// 1. 更新状态为构建中
+	//   1. UpdateStatus为构建Medium
 	db.Model(&config).Update("build_status", "building")
 
-	// 2. 生成嵌入式 JSON 配置
+	//   2. 生成嵌入式 JSON Config
 	embeddedConfigJSON := generateEmbeddedJSON(config, endpoint, token, streamFields)
 
-	// 3. 确定最终的持久化文件名和路径
+	//   3. 确定最终的持久化File名SumPath
 	fileName := fmt.Sprintf("vsentry-agent-%d-%s", config.ID, config.Type)
 	if config.Type == "windows" {
 		fileName += ".exe"
 	}
 	finalBinaryPath := filepath.Join(BuildOutputDir, fileName)
 
-	// 4. 执行动态编译 (将最终路径传入)
+	//   4. Execute动态编译 (将最终Path传入)
 	err := compileAgentDynamic(config.Type, embeddedConfigJSON, finalBinaryPath)
 	if err != nil {
-		// 编译失败，记录错误日志
+		//   编译Failed，记录ErrorLog
 		db.Model(&config).Updates(map[string]interface{}{
 			"build_status": "failed",
 			"build_output": err.Error(),
@@ -250,7 +242,7 @@ func BuildCollector(ctx *gin.Context) {
 		return
 	}
 
-	// 5. 编译成功，更新数据库状态
+	//   5. 编译Success，UpdateDatabaseStatus
 	db.Model(&config).Updates(map[string]interface{}{
 		"build_status": "completed",
 		"build_output": "Compilation successful",
@@ -266,7 +258,7 @@ func BuildCollector(ctx *gin.Context) {
 	})
 }
 
-// DownloadCollector 下载已编译的采集器 (纯粹的文件服务器功能)
+// DownloadCollector - (纯粹的FileServer功能)
 func DownloadCollector(ctx *gin.Context) {
 	id := ctx.Query("id")
 	if id == "" {
@@ -281,51 +273,42 @@ func DownloadCollector(ctx *gin.Context) {
 		return
 	}
 
-	// 拦截未编译完成的请求
-	if config.BuildStatus != "completed" {
+	// 拦截未编译完成的Request - config.BuildStatus != "completed" {
 		ctx.JSON(400, gin.H{"msg": "Agent has not been built successfully yet. Please build it first."})
 		return
 	}
 
-	// 推导文件路径
-	fileName := fmt.Sprintf("vsentry-agent-%d-%s", config.ID, config.Type)
+	// 推导FilePath - := fmt.Sprintf("vsentry-agent-%d-%s", config.ID, config.Type)
 	if config.Type == "windows" {
 		fileName += ".exe"
 	}
 	finalBinaryPath := filepath.Join(BuildOutputDir, fileName)
 
-	// 检查文件是否存在于磁盘上
-	if _, err := os.Stat(finalBinaryPath); os.IsNotExist(err) {
-		// 修复文件丢失导致的数据库状态不一致
-		db.Model(&config).Update("build_status", "pending")
+	// 检查File是否存在于磁盘上 - _, err := os.Stat(finalBinaryPath); os.IsNotExist(err) {
+		// 修复File丢失导致的DatabaseStatus不一致 - .Model(&config).Update("build_status", "pending")
 		ctx.JSON(404, gin.H{"msg": "Binary file is missing from server disk. Please rebuild."})
 		return
 	}
 
-	// 触发浏览器下载
-	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	// 触发浏览器Download - .Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	ctx.Header("Content-Type", "application/octet-stream")
 	ctx.File(finalBinaryPath)
 }
 
-// compileAgentDynamic 核心编译逻辑
-// targetOS: 目标系统类型; configJSON: 嵌入的配置文件; finalPath: 最终持久化存储的路径
+// compileAgentDynamic - //   targetOS: 目标SystemType; configJSON: 嵌入的ConfigFile; finalPath: 最终持久化Storage的Path
 func compileAgentDynamic(targetOS model.CollectorType, configJSON []byte, finalPath string) error {
 	tempBuildDir, err := os.MkdirTemp("", "vsentry-build-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp dir: %w", err)
 	}
-	// 确保编译结束后清理掉那些占用几百兆空间的临时源码目录
-	defer os.RemoveAll(tempBuildDir)
+	// 确保编译结束后清理掉那些占用几百兆空间的临时源码Directory - os.RemoveAll(tempBuildDir)
 
-	// 拷贝源码到沙盒目录
-	copyFile("./go.mod", filepath.Join(tempBuildDir, "go.mod"))
+	// 拷贝源码到沙盒Directory - ("./go.mod", filepath.Join(tempBuildDir, "go.mod"))
 	copyFile("./go.sum", filepath.Join(tempBuildDir, "go.sum"))
 	copyDir("./pkg", filepath.Join(tempBuildDir, "pkg"))
 	copyDir("./cmd", filepath.Join(tempBuildDir, "cmd"))
 
-	// 注入配置
-	configFilePath := filepath.Join(tempBuildDir, "cmd", "collectors", "config", "config.json")
+	// 注入Config - := filepath.Join(tempBuildDir, "cmd", "collectors", "config", "config.json")
 	if err := os.WriteFile(configFilePath, configJSON, 0644); err != nil {
 		return fmt.Errorf("failed to write embedded config: %w", err)
 	}
@@ -342,17 +325,17 @@ func compileAgentDynamic(targetOS model.CollectorType, configJSON []byte, finalP
 		outputFile += ".exe"
 	}
 
-	// 执行 go build
+	// Execute - build
 	cmd := exec.Command("go", "build", "-trimpath", "-ldflags", "-s -w", "-o", outputFile, ".")
 	cmd.Dir = filepath.Join(tempBuildDir, "cmd", "collectors")
-	// 关闭 CGO，确保 Agent 跨平台免依赖 (静态链接)
+	// Close - ，确保 Agent 跨平台免依赖 (静态链接)
 	cmd.Env = append(os.Environ(), "GOOS="+goos, "GOARCH=amd64", "CGO_ENABLED=0")
 
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("go build failed: %s\nOutput: %s", err.Error(), string(output))
 	}
 
-	// 编译成功后，将沙盒中的二进制文件拷贝到永久存储目录
+	//   编译Success后，将沙盒Medium的二进制File拷贝到永久StorageDirectory
 	if err := copyFile(outputFile, finalPath); err != nil {
 		return fmt.Errorf("failed to move compiled binary to permanent storage: %w", err)
 	}
@@ -360,8 +343,7 @@ func compileAgentDynamic(targetOS model.CollectorType, configJSON []byte, finalP
 	return nil
 }
 
-// generateEmbeddedJSON 接收从数据库提取的真实配置参数
-func generateEmbeddedJSON(config model.CollectorConfig, endpoint, token, streamFields string) []byte {
+// generateEmbeddedJSON - func generateEmbeddedJSON(config model.CollectorConfig, endpoint, token, streamFields string) []byte {
 	var sources []map[string]interface{}
 
 	if config.Sources != "" {
@@ -382,7 +364,7 @@ func generateEmbeddedJSON(config model.CollectorConfig, endpoint, token, streamF
 	return data
 }
 
-// ================= 工具函数区 =================
+//   ================= 工具函数区 =================
 
 func copyDir(src string, dst string) error {
 	srcInfo, err := os.Stat(src)

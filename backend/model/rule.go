@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Rule 使用 gorm.Model
+// Rule - gorm.Model
 type Rule struct {
 	gorm.Model
 	Name        string `json:"name"`
@@ -19,16 +19,16 @@ type Rule struct {
 	AuthorID    uint   `json:"author_id"`
 	Source      string `json:"source"`
 
-	// 规则类型: alert(报警规则) / forensic(取证规则) / investigation(调查规则)
+	//   RuleType: alert(报警Rule) / forensic(ForensicsRule) / investigation(InvestigationRule)
 	Type string `json:"type" gorm:"default:alert"`
 
-	// 回溯配置（仅报警规则使用）
+	//   回溯Config（仅报警Rule使用）
 	EnableBacktrace bool   `json:"enable_backtrace"`
 	BacktraceCron   string `json:"backtrace_cron"`
 	BacktraceStart  string `json:"backtrace_start"`
 }
 
-// RuleResponse 用于 API 返回，包含正确的 id 字段
+// RuleResponse - API Return，包含正确的 id 字段
 type RuleResponse struct {
 	ID          uint      `json:"id"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -45,7 +45,7 @@ type RuleResponse struct {
 	Type        string    `json:"type"`
 }
 
-// ToResponse 将 Rule 转换为 RuleResponse
+// ToResponse - Rule Convert为 RuleResponse
 func (r *Rule) ToResponse() RuleResponse {
 	return RuleResponse{
 		ID:          r.ID,

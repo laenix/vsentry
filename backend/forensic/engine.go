@@ -5,15 +5,13 @@ import (
 	"strings"
 )
 
-// ForensicEvent 标准化输出格式
-type ForensicEvent map[string]interface{}
+// ForensicEvent - type ForensicEvent map[string]interface{}
 
-// Parser 解析器接口
-type Parser interface {
+// Parser - type Parser interface {
 	Parse(filePath string) ([]ForensicEvent, error)
 }
 
-// GetParser 工厂方法：根据文件后缀动态分配解析器
+// GetParser - ：根据File后缀动态分配Parse器
 func GetParser(fileType string) (Parser, error) {
 	fileType = strings.ToLower(fileType)
 	switch fileType {

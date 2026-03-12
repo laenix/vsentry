@@ -7,11 +7,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-// GetConfig 获取系统配置（公开信息）
+// GetConfig - （公开Info）
 func GetConfig(ctx *gin.Context) {
 	externalURL := viper.GetString("server.external_url")
 	if externalURL == "" {
-		externalURL = "http://localhost:8088"
+		externalURL = "http://  localhost:8088"
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
