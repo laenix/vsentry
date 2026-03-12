@@ -86,10 +86,12 @@ export function CaseWorkspace({ caseId, onBack }: CaseWorkspaceProps) {
   // 跳转到ForensicsInvestigationPage
   const handleAnalyze = (file: ForensicFile) => {
     addTab('forensic_investigation', `Analysis: ${file.original_name}`, {
-      case_id: caseId,
+      task_id: caseId,  // case_id -> task_id
       file_id: file.id,
       file_type: file.file_type,
       file_name: file.original_name,
+      // 可选：带上有触发规则的查询语句（如果有）
+      triggered_rule: file.triggered_rule || null,
     });
   };
 

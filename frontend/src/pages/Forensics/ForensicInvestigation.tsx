@@ -11,10 +11,11 @@ import { toast } from "sonner";
 
 interface ForensicInvestigationProps {
   tabData?: {
-    case_id: number;
+    task_id: number;  // 原来是 case_id，现改为 task_id
     file_id: number;
     file_type: string;
     file_name: string;
+    triggered_rule?: string;  // 触发的规则
   };
 }
 
@@ -75,9 +76,9 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
   // 加载FileInfo
   useEffect(() => {
     const fetchFileInfo = async () => {
-      if (!tabData?.case_id) return;
+      if (!tabData?.task_id) return;
       try {
-        const res = await forensicsService.getTask(tabData.case_id);
+        const res = await forensicsService.getTask(tabData.task_id);
         if (res.code === 200 && res.data?.files) {
           const file = res.data.files.find((f: any) => f.id === tabData.file_id);
           if (file) setFileInfo(file);
@@ -108,7 +109,7 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
 
     try {
       const res = await forensicsService.executeRules(
-        tabData!.case_id,
+        tabData!.task_id,
         tabData!.file_id,
         selectedRules
       );
@@ -135,15 +136,15 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
   };
 
   const handleGoBack = () => {
-    // ReturnForensicsCasePage
-    if (tabData?.case_id) {
+    // 返回取证案件页面
+    if (tabData?.task_id) {
       addTab('forensics', 'Forensics', {});
     }
   };
 
   const handleViewInLogs = (result: ForensicResult) => {
-    // 跳转到LogQueryPage
-    const query = `env:forensics case_id:${tabData?.case_id} file_id:${tabData?.file_id}`;
+    // 跳转到日志查询页面，使用 | 分隔符
+    const query = `env:forensics | task_id:${tabData?.task_id} | file_id:${tabData?.file_id}`;
     addTab('logs', `Logs: ${tabData?.file_name}`, { query });
   };
 
