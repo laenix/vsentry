@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { forensicsService } from "@/services/forensics";
 import { ruleService, type DetectionRule } from "@/services/rules";
 import { useTabStore } from "@/stores/tab-store";
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Play, FlaskConical, FileText, Clock, ArrowLeft, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { TimelinePanel } from "@/pages/Investigation/TimelinePanel";
 
 interface ForensicInvestigationProps {
   tabData?: {
@@ -37,6 +38,23 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<ForensicResult[]>([]);
   const [executing, setExecuting] = useState(false);
+
+  // 把 ForensicResult 转换成 MergedEvent 格式给 TimelinePanel 使用
+  const forensicEvents = useMemo(() => {
+    const events: any[] = [];
+    results.forEach((result) => {
+      result.matched_data.forEach((data: any) => {
+        events.push({
+          ...data,
+          _time: result._time,
+          _source_template: result.rule_name,
+          severity: result.severity,
+          activity_name: data.activity_name || data.action || 'Match',
+        });
+      });
+    });
+    return events;
+  }, [results]);
 
   // 加载ForensicsRule
   useEffect(() => {
@@ -257,67 +275,30 @@ export default function ForensicInvestigationPage({ tabData }: ForensicInvestiga
         </div>
 
         {/* Right: Analysis Results Timeline */}
-        <Card className="flex-1 flex flex-col">
-          <CardHeader className="py-3 border-b">
+        <Card className="flex-1 flex flex-col overflow-hidden">
+          <CardHeader className="py-3 border-b flex-none">
             <CardTitle className="text-sm">Analysis Results</CardTitle>
             <CardDescription className="text-xs">Forensic rule detection results</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-hidden">
-            <ScrollArea className="h-full">
-              {results.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
-                  <FlaskConical className="w-10 h-10 opacity-20" />
-                  <p className="text-sm">Select rules and run analysis</p>
-                </div>
-              ) : (
-                <div className="p-4 space-y-3">
-                  {results.map((result, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 rounded-lg border bg-card hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={
-                            result.severity === 'critical' ? 'border-red-500 text-red-500' :
-                            result.severity === 'high' ? 'border-orange-500 text-orange-500' :
-                            'border-blue-500 text-blue-500'
-                          }>
-                            {result.severity}
-                          </Badge>
-                          <span className="font-medium">{result.rule_name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {new Date(result._time).toLocaleString('en-GB', { 
-                              year: 'numeric', month: '2-digit', day: '2-digit', 
-                              hour: '2-digit', minute: '2-digit', second: '2-digit',
-                              hour12: false
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="text-sm text-muted-foreground mb-3">
-                        <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-                          {JSON.stringify(result.matched_data, null, 2)}
-                        </pre>
-                      </div>
-
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleViewInLogs(result)}
-                      >
-                        <ExternalLink className="w-3 h-3 mr-1" />
-                        View in Logs
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
+            {results.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
+                <FlaskConical className="w-10 h-10 opacity-20" />
+                <p className="text-sm">Select rules and run analysis</p>
+              </div>
+            ) : (
+              <TimelinePanel 
+                mergedEvents={forensicEvents} 
+                onOpenInLogs={(ev) => {
+                  const queryParts: string[] = [];
+                  if (ev.src_ip) queryParts.push(`src_ip:${ev.src_ip}`);
+                  if (ev.dst_ip) queryParts.push(`dst_ip:${ev.dst_ip}`);
+                  if (ev.hostname) queryParts.push(`hostname:${ev.hostname}`);
+                  const query = queryParts.length > 0 ? queryParts.join(' | ') : '*';
+                  addTab('logs', 'Logs Query', { query });
+                }}
+              />
+            )}
           </CardContent>
         </Card>
       </div>
