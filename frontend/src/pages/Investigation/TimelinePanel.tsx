@@ -19,6 +19,11 @@ interface TimelineItemProps {
 function TimelineItem({ event, onOpenInLogs }: TimelineItemProps) {
   const [expanded, setExpanded] = useState(false);
   
+  // 安全解析时间
+  const eventTime = event._time || event.time || event.timestamp || new Date().toISOString();
+  const timeObj = new Date(eventTime);
+  const isValidTime = !isNaN(timeObj.getTime());
+  
   const eventAction = event.activity_name || event.action || event.event_type;
   const severity = event.severity || "info";
   
@@ -58,7 +63,7 @@ function TimelineItem({ event, onOpenInLogs }: TimelineItemProps) {
 
         {/* 时间 */}
         <div className="w-[140px] flex-shrink-0 font-mono text-xs text-muted-foreground">
-          {new Date(event._time).toLocaleString("en-GB", {
+          {isValidTime ? timeObj.toLocaleString("en-GB", {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
@@ -66,7 +71,7 @@ function TimelineItem({ event, onOpenInLogs }: TimelineItemProps) {
             minute: "2-digit",
             second: "2-digit",
             hour12: false,
-          })}
+          }) : "N/A"}
         </div>
 
         {/* 规则源 */}
@@ -125,9 +130,11 @@ function TimelineItem({ event, onOpenInLogs }: TimelineItemProps) {
 
 export function TimelinePanel({ mergedEvents, onOpenInLogs }: TimelinePanelProps) {
   // 按时间排序
-  const sortedEvents = [...mergedEvents].sort(
-    (a, b) => new Date(b._time).getTime() - new Date(a._time).getTime()
-  );
+  const sortedEvents = [...mergedEvents].sort((a, b) => {
+    const timeA = new Date(a._time || a.time || a.timestamp || 0).getTime();
+    const timeB = new Date(b._time || b.time || b.timestamp || 0).getTime();
+    return timeB - timeA;
+  });
 
   return (
     <Card className="flex-1 shadow-sm flex flex-col overflow-hidden border-t-4 border-t-primary/20">
