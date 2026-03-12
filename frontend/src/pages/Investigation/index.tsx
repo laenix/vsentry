@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { investigationService, type InvestigationTemplate } from "@/services/investigation";
+import { investigationService, type InvestigationDirective, extractParameters } from "@/services/investigation";
 import { incidentService } from "@/services/incidents";
 import { forensicsService } from "@/services/forensics";
 import { toast } from "sonner";
@@ -25,7 +25,7 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
   const forensicsFileId = tabData?.file_id;
 
   // 2. 核心状态池
-  const [templates, setTemplates] = useState<InvestigationTemplate[]>([]);
+  const [templates, setTemplates] = useState<InvestigationDirective[]>([]);
   const [selectedTemplates, setSelectedTemplates] = useState<number[]>([]);
   
   // Incident 完整数据与 Alert 切换状态
@@ -43,17 +43,31 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
 
   // ==================== 初始化与生命周期 ====================
 
-  // 初始化加载模板
+  // 初始化加载调查规则 (从 Rule Center 获取)
   useEffect(() => {
     fetchTemplates();
   }, []);
 
   const fetchTemplates = async () => {
     try {
-      const res = await investigationService.listTemplates();
-      if (res.code === 200 && res.data) setTemplates(res.data);
+      // 新版：从 Rule Center 获取 type="investigation" 的规则
+      const res = await investigationService.listRules();
+      if (res.code === 200 && res.data?.rules) {
+        // 转换 Rule 格式为 Directive 格式，并自动提取 parameters
+        const directives: InvestigationDirective[] = res.data.rules
+          .filter((r: any) => r.type === "investigation")
+          .map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            description: r.description || "",
+            logsql: r.query, // query -> logsql
+            parameters: JSON.stringify(extractParameters(r.query)), // 从 query 自动提取参数
+          }));
+        setTemplates(directives);
+      }
     } catch (error) {
-      toast.error("Failed to load templates");
+      console.error("Failed to load investigation rules:", error);
+      toast.error("Failed to load investigation rules");
     }
   };
 
@@ -213,7 +227,7 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
       const promises = selectedTemplates.map(async (templateId) => {
         const template = templates.find(t => t.id === templateId);
         const reqData = {
-          template_id: templateId,
+          rule_id: templateId, // 使用 rule_id (新版 Rule Center)
           incident_id: activeIncidentId ? parseInt(activeIncidentId) : undefined,
           params: contextVars,
         };
@@ -223,10 +237,11 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
           if (res.data.context_used) {
             updatedContext = { ...updatedContext, ...res.data.context_used };
           }
+          // 使用后端返回的 rule_name
           return (res.data.events || []).map((ev: any) => ({
             ...ev,
             _time: ev._time || ev.time || ev.timestamp || new Date().toISOString(),
-            _source_template: template?.name || "Unknown Rule",
+            _source_template: res.data.rule_name || template?.name || "Unknown Rule",
           }));
         }
         return [];

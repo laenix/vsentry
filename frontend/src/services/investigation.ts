@@ -1,41 +1,56 @@
 import { apiClient } from "@/lib/api/vsentry-client";
 import type { APIResponse } from "@/lib/api/vsentry-client";
 
-export interface InvestigationTemplate {
+// InvestigationRule: 来自 Rule Center 的调查规则
+export interface InvestigationRule {
+  id: number;
+  name: string;
+  description: string;
+  query: string;
+  type: "investigation";
+  enabled: boolean;
+}
+
+// InvestigationPage 使用的指令类型
+export interface InvestigationDirective {
   id: number;
   name: string;
   description: string;
   logsql: string;
-  parameters: string; // 这是一个 JSON 字符串数组，如 '["src_ip", "hostname"]'
+  parameters: string; // JSON 数组字符串，如 '["src_ip", "hostname"]'
 }
 
 export interface ExecuteParams {
-  template_id: number;
+  rule_id: number;
   incident_id?: number;
   params?: Record<string, string>;
 }
 
 export interface ExecuteResult {
   logsql: string;
+  template_name?: string;
   events: any[];
   count: number;
   context_used: Record<string, string>;
 }
 
-export const investigationService = {
-  listTemplates: () => 
-    apiClient.get<any, APIResponse<InvestigationTemplate[]>>("/investigation/templates"),
-  
-  // ✅ 新增：模板的 CRUD 管理
-  addTemplate: (data: Partial<InvestigationTemplate>) => 
-    apiClient.post<any, APIResponse<any>>("/investigation/templates", data),
-    
-  updateTemplate: (data: Partial<InvestigationTemplate>) => 
-    apiClient.put<any, APIResponse<any>>("/investigation/templates", data),
-    
-  deleteTemplate: (id: number) => 
-    apiClient.delete<any, APIResponse<any>>(`/investigation/templates?id=${id}`),
+// 自动从 LogSQL/Query 中提取参数 ${xxx}
+export function extractParameters(query: string): string[] {
+  const paramRegex = /\$\{([^}]+)\}/g;
+  const params: string[] = [];
+  let match;
+  while ((match = paramRegex.exec(query)) !== null) {
+    if (!params.includes(match[1])) params.push(match[1]);
+  }
+  return params;
+}
 
+export const investigationService = {
+  // 从 Rule Center 获取 type="investigation" 的规则
+  listRules: () => 
+    apiClient.get<any, APIResponse<{ rules: InvestigationRule[] }>>("/rules/list"),
+
+  // 执行调查
   execute: (data: ExecuteParams) => 
     apiClient.post<any, APIResponse<ExecuteResult>>("/investigation/execute", data),
 };

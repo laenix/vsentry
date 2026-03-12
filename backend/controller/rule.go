@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,9 +22,21 @@ func ListRules(ctx *gin.Context) {
 		return
 	}
 
+	// 调试：打印第一个 rule 的 ID
+	if len(rules) > 0 {
+		fmt.Printf("DEBUG: First rule ID = %d, Name = %s\n", rules[0].ID, rules[0].Name)
+	}
+
+	// 转换为 RuleResponse 以确保 id 字段正确
+	ruleResponses := make([]model.RuleResponse, len(rules))
+	for i, r := range rules {
+		fmt.Printf("DEBUG converting rule %d: ID=%d\n", i, r.ID)
+		ruleResponses[i] = r.ToResponse()
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{
 		"code": 200,
-		"data": gin.H{"rules": rules},
+		"data": gin.H{"rules": ruleResponses},
 		"msg":  "success",
 	})
 }

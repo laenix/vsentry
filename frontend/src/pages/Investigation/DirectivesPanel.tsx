@@ -2,13 +2,12 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Activity, Settings, LayoutList, X } from "lucide-react";
-import { type InvestigationTemplate } from "@/services/investigation";
-import { TemplateManagerDialog } from "./TemplateManagerDialog";
+import { Search, Activity, LayoutList, X, ExternalLink } from "lucide-react";
+import { type InvestigationDirective } from "@/services/investigation";
 import { DirectivesSelectorDialog } from "./DirectivesSelectorDialog";
 
 interface DirectivesPanelProps {
-  templates: InvestigationTemplate[];
+  templates: InvestigationDirective[];
   selectedTemplates: number[];
   onChangeSelection: (ids: number[]) => void;
   contextVars: Record<string, string>;
@@ -18,10 +17,17 @@ interface DirectivesPanelProps {
 }
 
 export function DirectivesPanel({ templates, selectedTemplates, onChangeSelection, contextVars, loading, onExecute, onRefreshTemplates }: DirectivesPanelProps) {
-  const [managerOpen, setManagerOpen] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
+  
+  // 状态：用于触发刷新
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const selectedList = templates.filter(t => selectedTemplates.includes(t.id));
+
+  const handleRefresh = () => {
+    onRefreshTemplates();
+    setRefreshKey(k => k + 1);
+  };
 
   return (
     <>
@@ -41,8 +47,8 @@ export function DirectivesPanel({ templates, selectedTemplates, onChangeSelectio
               <Button variant="outline" size="sm" onClick={() => setSelectorOpen(true)}>
                 <LayoutList className="w-4 h-4 mr-2" /> Select Directives
               </Button>
-              <Button variant="outline" size="icon" title="Manage Rules" onClick={() => setManagerOpen(true)}>
-                <Settings className="w-4 h-4 text-muted-foreground" />
+              <Button variant="outline" size="sm" title="Refresh Rules" onClick={handleRefresh}>
+                <ExternalLink className="w-4 h-4 mr-1" /> Refresh
               </Button>
               <Button onClick={onExecute} disabled={loading || selectedTemplates.length === 0} className="shadow-sm ml-2">
                 {loading ? <Activity className="w-4 h-4 mr-2 animate-spin" /> : <Activity className="w-4 h-4 mr-2" />}
@@ -67,8 +73,15 @@ export function DirectivesPanel({ templates, selectedTemplates, onChangeSelectio
         </CardContent>
       </Card>
 
-      <DirectivesSelectorDialog open={selectorOpen} onOpenChange={setSelectorOpen} templates={templates} selectedIds={selectedTemplates} onChange={onChangeSelection} contextVars={contextVars} />
-      <TemplateManagerDialog open={managerOpen} onOpenChange={setManagerOpen} templates={templates} onRefresh={onRefreshTemplates} />
+      <DirectivesSelectorDialog 
+        key={refreshKey}
+        open={selectorOpen} 
+        onOpenChange={setSelectorOpen} 
+        templates={templates} 
+        selectedIds={selectedTemplates} 
+        onChange={onChangeSelection} 
+        contextVars={contextVars} 
+      />
     </>
   );
 }

@@ -165,11 +165,6 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 	// investigation
 	investigationGroup := r.Group("/investigation", middleware.AuthMiddleware())
 	{
-		investigationGroup.GET("/templates", controller.ListInvestigationTemplates)
-		investigationGroup.POST("/templates", controller.AddInvestigationTemplate)
-		investigationGroup.PUT("/templates", controller.UpdateInvestigationTemplate)    // 新增
-		investigationGroup.DELETE("/templates", controller.DeleteInvestigationTemplate) // 新增
-
 		investigationGroup.POST("/execute", controller.ExecuteInvestigation) // 核心执行引擎
 	}
 	// forensics

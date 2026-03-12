@@ -5,12 +5,12 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Search, ChevronRight, ChevronLeft, ChevronsRight, ChevronsLeft, Target } from "lucide-react";
-import { type InvestigationTemplate } from "@/services/investigation";
+import { type InvestigationDirective } from "@/services/investigation";
 
 interface DirectivesSelectorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  templates: InvestigationTemplate[];
+  templates: InvestigationDirective[];
   selectedIds: number[];
   onChange: (ids: number[]) => void;
   contextVars: Record<string, string>;
@@ -20,7 +20,7 @@ export function DirectivesSelectorDialog({ open, onOpenChange, templates, select
   const [search, setSearch] = useState("");
 
   // 检查是否缺参数
-  const getMissingParams = (tpl: InvestigationTemplate) => {
+  const getMissingParams = (tpl: InvestigationDirective) => {
     let requiredParams: string[] = [];
     try { requiredParams = JSON.parse(tpl.parameters || "[]"); } catch(e){}
     return requiredParams.filter(p => !contextVars[p]);
@@ -44,8 +44,12 @@ export function DirectivesSelectorDialog({ open, onOpenChange, templates, select
   const handleClearAll = () => onChange([]);
 
   const toggleOne = (id: number, add: boolean) => {
-    if (add) onChange([...selectedIds, id]);
-    else onChange(selectedIds.filter(existing => existing !== id));
+    if (add) {
+      if (selectedIds.includes(id)) return;
+      onChange([...selectedIds, id]);
+    } else {
+      onChange(selectedIds.filter(existing => existing !== id));
+    }
   };
 
   return (
