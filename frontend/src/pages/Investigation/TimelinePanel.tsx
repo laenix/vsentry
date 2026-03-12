@@ -1,15 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Clock } from "lucide-react";
+import { Search, Clock, ExternalLink } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { MergedEvent } from "./types";
 
 interface TimelinePanelProps {
   mergedEvents: MergedEvent[];
+  onOpenInLogs?: (event: MergedEvent) => void;  // 可选的跳转函数
 }
 
-export function TimelinePanel({ mergedEvents }: TimelinePanelProps) {
+export function TimelinePanel({ mergedEvents, onOpenInLogs }: TimelinePanelProps) {
   return (
     <Card className="flex-1 shadow-sm flex flex-col overflow-hidden border-t-4 border-t-primary/20">
       <CardHeader className="pb-2 bg-muted/10 border-b flex-none py-3">
@@ -67,6 +69,18 @@ export function TimelinePanel({ mergedEvents }: TimelinePanelProps) {
                           <span className="font-mono text-[11px] text-muted-foreground break-all whitespace-pre-wrap leading-relaxed">
                             {ev.raw_data || JSON.stringify(ev, null, 2)}
                           </span>
+                          {/* 跳转按钮 */}
+                          {onOpenInLogs && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 px-2 text-[10px] mt-1 w-fit"
+                              onClick={() => onOpenInLogs(ev)}
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              Query Similar
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

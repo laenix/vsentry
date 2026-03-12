@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { investigationService, type InvestigationDirective, extractParameters } from "@/services/investigation";
 import { incidentService } from "@/services/incidents";
 import { forensicsService } from "@/services/forensics";
+import { useTabStore } from "@/stores/tab-store";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,8 @@ import { DirectivesPanel } from "./DirectivesPanel";
 import { TimelinePanel } from "./TimelinePanel";
 
 export default function InvestigationPage({ tabData }: InvestigationPageProps) {
+  const { addTab } = useTabStore();
+  
   // 1. 路由与初始上下文识别
   const [searchParams] = useSearchParams();
   const urlIncidentId = searchParams.get("incident_id");
@@ -353,7 +356,22 @@ export default function InvestigationPage({ tabData }: InvestigationPageProps) {
           onExecute={handleExecuteInvestigation}
           onRefreshTemplates={fetchTemplates}
         />
-        <TimelinePanel mergedEvents={mergedEvents} />
+        <TimelinePanel 
+          mergedEvents={mergedEvents} 
+          onOpenInLogs={(ev) => {
+            // 从事件中提取可用的查询字段来构建查询
+            const queryParts: string[] = [];
+            if (ev.src_ip) queryParts.push(`src_ip:${ev.src_ip}`);
+            if (ev.dst_ip) queryParts.push(`dst_ip:${ev.dst_ip}`);
+            if (ev.hostname) queryParts.push(`hostname:${ev.hostname}`);
+            if (ev.username) queryParts.push(`username:${ev.username}`);
+            if (ev.process_name) queryParts.push(`process_name:${ev.process_name}`);
+            if (ev.activity_name) queryParts.push(`activity_name:${ev.activity_name}`);
+            
+            const query = queryParts.length > 0 ? queryParts.join(' | ') : '*';
+            addTab('logs', 'Logs Query', { query });
+          }}
+        />
       </div>
     </div>
   );
