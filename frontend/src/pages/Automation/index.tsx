@@ -2,8 +2,14 @@
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, FileCode, Layout } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import PlaybookList from "./PlaybookList";
 import RunHistoryList from "./RunHistoryList";
 
@@ -18,9 +24,23 @@ export default function AutomationPage() {
           <h1 className="text-2xl font-bold tracking-tight">Automation</h1>
           <p className="text-muted-foreground text-sm">Orchestrate security workflows and automate response.</p>
         </div>
-        <Button onClick={() => navigate("/automation/edit/new")} className="bg-primary shadow-sm">
-          <Plus className="w-4 h-4 mr-2" /> Create Playbook
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="bg-primary shadow-sm">
+              <Plus className="w-4 h-4 mr-2" /> Create Playbook
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => navigate("/automation/edit/new")}>
+              <Layout className="w-4 h-4 mr-2" />
+              Visual Editor (React Flow)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/automation/crd/new")}>
+              <FileCode className="w-4 h-4 mr-2" />
+              CRD Editor (YAML)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">

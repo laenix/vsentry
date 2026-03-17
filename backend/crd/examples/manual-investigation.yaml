@@ -1,0 +1,53 @@
+# Playbook 示例: 手动触发
+# 手动执行的安全运营剧本
+
+---
+apiVersion: vsentry.io/v1
+kind: Playbook
+metadata:
+  name: manual-investigation
+  labels:
+    source: manual
+    category: investigation
+spec:
+  enabled: true
+  description: 手动触发的调查剧本，用于批量查询和报告生成
+
+  trigger:
+    source: manual
+
+  actions:
+    # 1. 查询最近 24 小时的告警
+    - name: query-recent-alerts
+      type: expression
+      config:
+        expression: |
+          alerts = query_logs("severity >= medium", last_24h)
+          return alerts
+
+    # 2. 生成报告并发送到邮箱
+    - name: send-report
+      type: email
+      config:
+        smtpHost: smtp.company.com
+        smtpPort: 587
+        username: vsentry@company.com
+        password: {{ .secrets.smtp_password }}
+        to: security-team@company.com
+        subject: "[VSentry] 每日安全态势报告"
+        content: |
+          <html>
+          <body>
+            <h2>📊 每日安全态势报告</h2>
+            <p><strong>统计周期:</strong> 过去 24 小时</p>
+            <p><strong>告警总数:</strong> {{ .results.alert_count }}</p>
+            <p><strong>严重告警:</strong> {{ .results.critical_count }}</p>
+            <hr>
+            <h3>Top 5 受攻击容器</h3>
+            <ul>
+              {{ range .results.top_containers }}
+              <li>{{ .name }} - {{ .alert_count }} 次告警</li>
+              {{ end }}
+            </ul>
+          </body>
+          </html>

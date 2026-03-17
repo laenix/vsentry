@@ -1,0 +1,51 @@
+# Playbook 示例: 条件分支
+# 根据检测结果执行不同的响应动作
+
+---
+apiVersion: vsentry.io/v1
+kind: Playbook
+metadata:
+  name: conditional-response
+  labels:
+    category: conditional
+spec:
+  enabled: true
+  description: 根据告警严重程度执行不同响应
+
+  trigger:
+    source: falco
+    conditions:
+      - "severity >= medium"
+
+  actions:
+    # 条件分支节点
+    - name: check-severity
+      type: condition
+      config:
+        expression: incident.severity == "critical"
+      
+      # 条件为 true 时执行 (严重告警)
+      branchs:
+        trueBranch:
+          - name: critical-actions
+            type: expression
+            config:
+              expression: |
+                # 执行高危动作
+                - evict_pod(incident.pod, incident.namespace)
+                - capture_memory(incident.pod)
+                - send_email(security_team, "严重告警: " + incident.name)
+        
+        # 条件为 false 时执行 (中低危告警)
+        falseBranch:
+          - name: low-severity-actions
+            type: webhook
+            config:
+              url: https://logging.company.com/api/v1/events
+              method: POST
+              body: |
+                {
+                  "event": "security_warning",
+                  "severity": "{{ .incident.severity }}",
+                  "pod": "{{ .incident.pod }}"
+                }

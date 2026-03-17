@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit2, MoreHorizontal, Zap, Link as LinkIcon, Loader2, ShieldCheck } from "lucide-react";
+import { Edit2, MoreHorizontal, Zap, Link as LinkIcon, Loader2, ShieldCheck, FileCode } from "lucide-react";
 import { automationService } from "@/services/automation"; //
 import type { Playbook } from "@/services/automation";       //
 import { ruleService } from "@/services/rules";       //
@@ -97,7 +97,14 @@ export default function PlaybookList({ viewMode }: PlaybookListProps) {
                 <TableCell className="text-xs capitalize">{pb.trigger_type?.replace('_', ' ') || 'Manual'}</TableCell>
                 <TableCell><Badge variant={pb.isActive ? "outline" : "secondary"}>{pb.isActive ? "Active" : "Disabled"}</Badge></TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => navigate(`/automation/edit/${pb.ID}`)}><Edit2 className="w-4 h-4" /></Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="icon" title="CRD Editor" onClick={() => navigate(`/automation/crd/${pb.ID}`)}>
+                      <FileCode className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" title="Visual Editor" onClick={() => navigate(`/automation/edit/${pb.ID}`)}>
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

@@ -197,5 +197,11 @@ func setupAPIRoutes(r *gin.RouterGroup) {
 		automation.GET("/executions/:exec_id", controller.GetExecutionDetail)
 		automation.GET("/executions", controller.ListAllExecutions) // Get所有Execute记录
 
+		// CRD 导入导出
+		automation.POST("/import", controller.ImportPlaybookCRD)
+		automation.GET("/:id/export", controller.ExportPlaybookCRD)
+		automation.GET("/crd/examples", controller.ListPlaybookCRDs)
+		automation.GET("/crd/examples/:name", controller.GetPlaybookCRDExample)
+
 	}
 }

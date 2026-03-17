@@ -1,0 +1,102 @@
+# VSentry Playbook CRD 示例
+# 这是一个完整的 Playbook 定义，展示了如何配置触发条件和响应动作链
+#
+# 使用方法:
+#   kubectl apply -f playbook-example.yaml
+#
+# 查看所有 Playbook:
+#   kubectl get playbooks
+
+---
+apiVersion: vsentry.io/v1
+kind: Playbook
+metadata:
+  name: detect-and-isolate-threat
+  labels:
+    severity: critical
+    category: incident-response
+spec:
+  # 启用状态
+  enabled: true
+
+  # 描述
+  description: |
+    检测到可疑进程执行时，自动采集内存快照、隔离 Pod 并发送告警
+
+  # 触发条件
+  trigger:
+    source: falco
+    severity: critical
+    conditions:
+      - "severity = critical"
+      - "category = container_escape"
+      - "process.exec in ('/bin/bash', '/bin/sh', 'nc', 'ncat')"
+
+  # 响应动作链
+  actions:
+    # 1. 采集内存快照
+    - name: capture-memory
+      type: forensics
+      config:
+        capture: memory
+        timeout: 30s
+        storage: s3://vsentry-evidence/{{ .incident.id }}
+
+    # 2. 隔离受感染 Pod
+    - name: isolate-pod
+      type: kubernetes
+      config:
+        action: patch
+        kind: Pod
+        namespace: {{ .incident.namespace }}
+        selector: {{ .incident.pod }}
+        patch:
+          metadata:
+            labels:
+              vsentry.io/quarantined: "true"
+          spec:
+            tolerations: []
+
+    # 3. 发送 Slack 告警
+    - name: notify-security-team
+      type: webhook
+      config:
+        url: https://hooks.slack.com/services/xxx/yyy/zzz
+        method: POST
+        headers:
+          Content-Type: application/json
+        template: |
+          {
+            "text": "🚨 *安全告警*",
+            "attachments": [{
+              "color": "danger",
+              "fields": [
+                {"title": "事件", "value": "{{ .incident.name }}", "short": true},
+                {"title": "严重程度", "value": "{{ .incident.severity }}", "short": true},
+                {"title": "Pod", "value": "{{ .incident.pod }}", "short": true},
+                {"title": "描述", "value": "{{ .incident.description }}"}
+              ]
+            }]
+          }
+
+    # 4. 记录到 SIEM
+    - name: log-to-siem
+      type: webhook
+      config:
+        url: https://siem.company.com/api/v1/events
+        method: POST
+        headers:
+          Authorization: Bearer {{ .secrets.siem_api_key }}
+          Content-Type: application/json
+        template: |
+          {
+            "timestamp": "{{ .incident.created_at }}",
+            "source": "vsentry",
+            "event_type": "security_incident",
+            "severity": "{{ .incident.severity }}",
+            "description": "{{ .incident.description }}",
+            "pod": "{{ .incident.pod }}",
+            "namespace": "{{ .incident.namespace }}",
+            "playbook": "detect-and-isolate-threat",
+            "actions_taken": ["memory_capture", "pod_isolation", "slack_notification"]
+          }

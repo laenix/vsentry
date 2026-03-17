@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster"; // 或 sonner
 import LoginPage from "@/pages/Login";
 // ✅ 引入NewPage
 import EditPlaybookPage from "@/pages/Automation/EditPlaybook";
+import CRDEditorPage from "@/pages/Automation/CRDEditor";
 
 // 1. 简单的Permission守卫Group件 (保持不变)
 const RequireAuth = ({ children }: { children: React.JSX.Element }) => {
@@ -24,13 +25,23 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
 
         {/* ✅ 3. Automation Edit器路由 (独立全屏，不走 Tab System) */}
-        {/* 注意：必须放在 "/*" 之ago，否则会被 MainLayout 拦截 */}
+        {/* 注意：必须放在 "/*" 之前，否则会被 MainLayout 拦截 */}
         <Route 
           path="/automation/edit/:id" 
           element={
             <RequireAuth>
               {/* 这里不包 MainLayout，直接Render全屏Edit器 */}
               <EditPlaybookPage />
+            </RequireAuth>
+          } 
+        />
+
+        {/* ✅ CRD Editor 路由 (表单 + YAML 预览) */}
+        <Route 
+          path="/automation/crd/:id" 
+          element={
+            <RequireAuth>
+              <CRDEditorPage />
             </RequireAuth>
           } 
         />

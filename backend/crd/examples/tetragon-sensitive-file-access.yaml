@@ -1,0 +1,99 @@
+# Playbook 示例: Tetragon 集成
+# 监听 Tetragon eBPF 事件，检测敏感文件访问
+
+---
+apiVersion: vsentry.io/v1
+kind: Playbook
+metadata:
+  name: tetragon-sensitive-file-access
+  labels:
+    source: tetragon
+    category: data-exfiltration
+spec:
+  enabled: true
+  description: 检测容器内敏感文件访问并自动隔离
+
+  trigger:
+    source: tetragon
+    severity: high
+    conditions:
+      - "event_type = process_exec"
+      - "process.binary in ('cat', 'grep', 'awk', 'sed')"
+      - "file.path in ('/etc/passwd', '/etc/shadow', '/root/.ssh')"
+
+  actions:
+    # 1. 记录详细审计日志
+    - name: audit-log
+      type: webhook
+      config:
+        url: https://audit.company.com/api/v1/logs
+        method: POST
+        headers:
+          Content-Type: application/json
+        body: |
+          {
+            "source": "tetragon",
+            "event": "sensitive_file_access",
+            "timestamp": "{{ .incident.timestamp }}",
+            "process": "{{ .incident.process }}",
+            "file": "{{ .incident.file }}",
+            "container": "{{ .incident.container }}"
+          }
+
+    # 2. 触发容器隔离
+    - name: isolate-container
+      type: kubernetes
+      config:
+        action: patch
+        kind: Pod
+        namespace: {{ .incident.namespace }}
+        selector: {{ .incident.pod }}
+        patch:
+          spec:
+            containers:
+              - name: *
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+
+    # 3. 创建 NetworkPolicy 阻止出站流量
+    - name: block-egress
+      type: kubernetes
+      config:
+        action: create
+        kind: NetworkPolicy
+        namespace: {{ .incident.namespace }}
+        patch:
+          apiVersion: networking.k8s.io/v1
+          kind: NetworkPolicy
+          metadata:
+            name: vsentry-quarantine-{{ .incident.id }}
+          spec:
+            podSelector:
+              matchLabels:
+                {{ .incident.pod }}
+            policyTypes:
+              - Egress
+            egress: []  # 拒绝所有出站流量
+
+    # 4. 发送告警
+    - name: alert
+      type: email
+      config:
+        smtpHost: smtp.company.com
+        smtpPort: 587
+        username: vsentry@company.com
+        password: {{ .secrets.smtp_password }}
+        to: soc@company.com,security@company.com
+        subject: "[VSentry] 敏感文件访问告警"
+        content: |
+          <html>
+          <body>
+            <h2>🚨 敏感文件访问告警</h2>
+            <p><strong>时间:</strong> {{ .incident.timestamp }}</p>
+            <p><strong>容器:</strong> {{ .incident.container }}</p>
+            <p><strong>进程:</strong> {{ .incident.process }}</p>
+            <p><strong>访问文件:</strong> {{ .incident.file }}</p>
+            <p><strong>动作:</strong> 已自动隔离容器并阻止出站流量</p>
+          </body>
+          </html>
