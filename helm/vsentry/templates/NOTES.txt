@@ -1,0 +1,57 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+## Quick Start
+
+### Access VSentry
+
+{{- if .Values.ingress.enabled }}
+VSentry is accessible via ingress at:
+{{- range .Values.ingress.hosts }}
+  http{{ if .tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+VSentry can be accessed via port-forward:
+
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "vsentry.fullname" . }} 8088:{{ .Values.service.port }}
+
+Then open http://localhost:8088 in your browser.
+{{- end }}
+
+### Default Credentials
+
+- Username: `admin`
+- Password: `admin123`
+
+**IMPORTANT**: Change the default password in production!
+
+### Configuration
+
+To customize the deployment:
+
+```bash
+# Update external URL
+helm upgrade {{ .Release.Name }} vsentry/vsentry \
+  --set config.externalUrl=https://vsentry.yourdomain.com
+
+# Use external VictoriaLogs
+helm upgrade {{ .Release.Name }} vsentry/vsentry \
+  --set victorialogs.enabled=false \
+  --set externalVictorialogs.url=http://victorialogs:9428
+```
+
+### VictoriaLogs
+
+{{- if .Values.victorialogs.enabled }}
+Embedded VictoriaLogs is enabled and deployed alongside VSentry.
+{{- else }}
+VictoriaLogs is configured to use: {{ .Values.externalVictorialogs.url }}
+{{- end }}
+
+For more configuration options, see the values.yaml file.

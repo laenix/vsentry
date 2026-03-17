@@ -1,0 +1,33 @@
+apiVersion: v2
+name: vsentry
+description: |
+  VSentry - Cloud-Native SIEM + SOAR Platform
+  
+  A security information and event management (SIEM) platform with 
+  security orchestration, automation and response (SOAR) capabilities
+  designed for modern Kubernetes environments.
+keywords:
+  - siem
+  - soar
+  - security
+  - kubernetes
+  - falco
+  - tetragon
+  - ocsf
+  - forensics
+  - cloud-native
+home: https://github.com/laenix/vsentry
+sources:
+  - https://github.com/laenix/vsentry
+maintainers:
+  - name: Boris Xu
+    email: boris@example.com
+    url: https://github.com/laenix
+engine: gotpl
+version: 0.1.0
+appVersion: "latest"
+type: application
+icon: https://raw.githubusercontent.com/laenix/vsentry/main/docs/screenshots/readme-dashboard.png
+annotations:
+  category: Security
+  licenses: Apache-2.0

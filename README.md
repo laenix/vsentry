@@ -1,4 +1,4 @@
-# VSentry - SIEM + SOAR Platform
+# VSentry - Cloud-Native SIEM + SOAR Platform
 
 <p align="right">
   <a href="README.zh-CN.md">中文版</a>
@@ -9,10 +9,13 @@
     <img src="https://img.shields.io/github/stars/laenix/vsentry?style=social" alt="Stars">
   </a>
   <a href="https://github.com/laenix/vsentry/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License">
+    <img src="https://img.shields.io/badge/License-Apache--2.0-blue.svg" alt="License">
   </a>
   <a href="https://github.com/laenix/vsentry/releases">
     <img src="https://img.shields.io/github/v/release/laenix/vsentry" alt="Release">
+  </a>
+  <a href="https://kubernetes.io">
+    <img src="https://img.shields.io/badge/Kubernetes-Ready-326CE5?style=for-the-badge&logo=kubernetes" alt="Kubernetes">
   </a>
 </p>
 
@@ -22,27 +25,38 @@
   <img src="https://img.shields.io/badge/VictoriaLogs-latest-2D3B67?style=for-the-badge" alt="VictoriaLogs">
 </p>
 
-VSentry is an open-source SIEM (Security Information and Event Management) + SOAR (Security Orchestration, Automation and Response) platform designed for small to medium enterprises.
+**VSentry** is a cloud-native SIEM (Security Information & Event Management) + SOAR (Security Orchestration, Automation & Response) platform designed for modern Kubernetes environments. Built for security teams who need enterprise-grade detection and response capabilities without the enterprise complexity.
+
+> **Vision**: Becoming the missing DFIR (Digital Forensics & Incident Response) control plane for cloud-native runtime security tools like Falco and Tetragon.
+
+## 🛡️ Why VSentry?
+
+- **Cloud-Native First**: Designed from ground up for Kubernetes, with Helm deployment and cloud-native data pipelines
+- **OCSF Native**: Full support for Open Cybersecurity Schema Framework - ingest, normalize, and analyze security events in vendor-neutral format
+- **Ephemeral Forensics**: Purpose-built for container lifecycle - capture evidence before it's gone
+- **Falco/Tetragon Console**: The missing response layer for CNCF runtime security projects
+- **Open Source**: Apache 2.0 licensed, community-driven
 
 ## 🚀 Features
 
 ### Core SIEM Features
-- **Log Collection & Ingestion** - HTTP API with token authentication
-- **Log Storage** - Powered by VictoriaLogs for high-performance storage
+- **Log Collection & Ingestion** - HTTP API with token authentication, OCSF compliance
+- **Log Storage** - Powered by VictoriaLogs for high-performance, cloud-native storage
 - **Log Query** - Search and analyze logs with LogSQL
 - **Custom Tables** - Define custom log groupings using stream fields
 - **OCSF Support** - Open Cybersecurity Schema Framework compliant log normalization
 
 ### Detection & Response
-- **Detection Rules** - Create rules with cron-based scheduling
-- **Incident Management** - Track and manage security incidents
+- **Detection Rules** - Create rules with cron-based scheduling (down to seconds)
+- **Incident Management** - Track and manage security incidents with full lifecycle
 - **Investigation Center** - Pre-built investigation templates with timeline view and directive suggestions
 - **Forensics** - EVTX/PCAP upload, automatic parsing, and timeline analysis
 - **SOAR Automation** - Visual workflow automation with React Flow
 
-### Integrations
-- **Connectors** - Pre-built integrations for 24+ security tools
-- **Collectors** - Build native Go agents for Windows, Linux, and macOS with OCSF output support
+### Cloud-Native Integrations
+- **Falco Connector** - Native integration with Falco alerts
+- **Tetragon Connector** - eBPF-based runtime security events
+- **Collectors** - Build native Go agents for Windows, Linux, and macOS with OCSF output
 
 ### Administration
 - **User Management** - Multi-user with role-based access
@@ -144,7 +158,7 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                  Go + Gin (Port 8088)                       │
+│                  VSentry (Go + Gin)                         │
 │  ┌─────────────────┐    ┌─────────────────────────────────┐ │
 │  │   React SPA     │    │   REST API + Ingest Endpoint   │ │
 │  │  (Static Files) │    │   (Auth, Rules, Playbooks...)  │ │
@@ -159,16 +173,34 @@ VSentry is an open-source SIEM (Security Information and Event Management) + SOA
 │ (Log Storage) │  │  (Metadata)   │  │   Agents    │
 │   :9428       │  │               │  │  (Push)     │
 └───────────────┘  └───────────────┘  └─────────────┘
+        │                                   │
+        └──────────────┬────────────────────┘
+                       ▼
+         ┌─────────────────────────────┐
+         │  Cloud-Native Integrations  │
+         │  • Falco (CNCF Sandbox)     │
+         │  • Tetragon (CNCF Sandbox)  │
+         │  • OCSF Normalization       │
+         └─────────────────────────────┘
 ```
 
 ## 📦 Quick Start
 
-### Prerequisites
-- Go 1.25+
-- Node.js 18+
-- Docker & Docker Compose (optional)
+### Option 1: Helm (Recommended for Kubernetes)
 
-### Using Docker Compose (Recommended)
+```bash
+# Add Helm repository
+helm repo add vsentry https://laenix.github.io/vsentry-charts
+helm repo update
+
+# Install with default values
+helm install vsentry vsentry/vsentry
+
+# Or with custom values
+helm install vsentry vsentry/vsentry -f values.yaml
+```
+
+### Option 2: Docker Compose (Development)
 
 ```bash
 # Clone the repository
@@ -182,7 +214,7 @@ make docker-up
 # Default login: admin / admin123
 ```
 
-### Manual Setup
+### Option 3: Manual Setup
 
 #### Backend
 
@@ -211,11 +243,44 @@ npm run dev
 npm run build
 ```
 
+## ☸️ Kubernetes Deployment
+
+VSentry is designed for cloud-native environments. Deploy in minutes:
+
+```bash
+# Minimal deployment
+kubectl create namespace vsentry
+helm install vsentry vsentry/vsentry -n vsentry
+
+# With external VictoriaLogs
+helm install vsentry vsentry/vsentry \
+  --set victorialogs.enabled=false \
+  --set victorialogs.url=http://victorialogs:9428
+
+# With ingress
+helm install vsentry vsentry/vsentry \
+  --set ingress.enabled=true \
+  --set ingress.hostname=vsentry.example.com
+```
+
+### Helm Values
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `replicaCount` | Number of replicas | 1 |
+| `image.repository` | Container image repository | `laenix/vsentry` |
+| `image.tag` | Image tag | `latest` |
+| `service.type` | Service type | `ClusterIP` |
+| `service.port` | Service port | 8088 |
+| `ingress.enabled` | Enable ingress | false |
+| `victorialogs.enabled` | Deploy embedded VictoriaLogs | true |
+| `persistence.enabled` | Enable persistence | false |
+| `persistence.storageClass` | Storage class | `standard` |
+| `persistence.size` | PVC size | `10Gi` |
+
 ## 🔧 Configuration
 
-### Using Environment Variables (Recommended)
-
-When running with Docker Compose, you can use environment variables to override settings:
+### Using Environment Variables
 
 ```bash
 # Method 1: Using .env file
@@ -289,6 +354,7 @@ vsentry/
 │   │   ├── services/  # API services
 │   │   └── lib/       # Utilities
 │   └── public/        # Static assets
+├── helm/              # Helm charts
 ├── config/            # Sample configs
 ├── scripts/           # Utility scripts
 ├── docs/              # Documentation
@@ -299,6 +365,10 @@ vsentry/
 ```
 
 ## 🔌 Supported Integrations
+
+### Cloud-Native Security
+- **Falco** - CNCF runtime security project
+- **Tetragon** - CNCF eBPF-based security observability
 
 ### Security Tools
 - Palo Alto Networks
@@ -327,11 +397,14 @@ Contributions are welcome! Please read our [Contributing Guide](docs/CONTRIBUTIN
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License, Version 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
 - [VictoriaMetrics](https://victoriametrics.com/) - Log storage
+- [Falco](https://falco.org/) - Cloud-native runtime security
+- [Tetragon](https://tetragon.io/) - eBPF security observability
+- [OCSF](https://github.com/ocsf/) - Open Cybersecurity Schema Framework
 - [Gin](https://gin-gonic.com/) - Web framework
 - [React Flow](https://reactflow.dev/) - Workflow automation UI
 
