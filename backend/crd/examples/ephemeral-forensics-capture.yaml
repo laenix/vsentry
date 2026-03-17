@@ -1,0 +1,107 @@
+# Playbook 示例: 云原生易失性取证
+# 当检测到可疑行为时，自动采集容器内存和文件系统证据
+
+---
+apiVersion: vsentry.io/v1
+kind: Playbook
+metadata:
+  name: ephemeral-forensics-capture
+  labels:
+    category: forensics
+    severity: critical
+spec:
+  enabled: true
+  description: |
+    当触发严重告警时，自动采集受感染容器的内存和文件系统证据
+    证据将保存到 S3 兼容存储，供后续取证分析
+
+  # 触发条件: Falco 严重告警
+  trigger:
+    source: falco
+    severity: critical
+    conditions:
+      - "severity = critical"
+      - "category in (container_escape, privilege_escalation, sensitive_file_access)"
+
+  # 响应动作链
+  actions:
+    # 1. 采集易失性证据 (内存 + 文件系统)
+    - name: capture-ephemeral-evidence
+      type: forensics
+      config:
+        # 取证类型: all (内存 + 文件系统)
+        capture: all
+        
+        # Kubernetes 目标 (支持模板变量)
+        namespace: {{ .incident.namespace }}
+        pod_name: {{ .incident.pod }}
+        container_name: {{ .incident.container }}
+        
+        # 采集超时
+        timeout: 60s
+        
+        # 存储后端: s3 或 local
+        storage: s3
+        
+        # S3 配置 (支持环境变量)
+        s3_endpoint: ${S3_ENDPOINT}
+        s3_bucket: vsentry-evidence
+        s3_region: us-east-1
+        s3_path_prefix: "forensics/{{ .incident.id }}"
+        
+        # 本地路径 (开发/测试用)
+        local_path: /tmp/vsentry-evidence
+
+    # 2. 记录证据 ID 到事件
+    - name: log-evidence-id
+      type: expression
+      config:
+        expression: |
+          # 将证据 ID 记录到事件元数据
+          incident.metadata.evidence_id = actions[0].output.evidence_id
+          incident.metadata.evidence_files = actions[0].output.files
+          return incident.metadata
+
+    # 3. 发送告警通知
+    - name: notify-security-team
+      type: webhook
+      config:
+        url: https://hooks.slack.com/services/xxx/yyy/zzz
+        method: POST
+        headers:
+          Content-Type: application/json
+        body: |
+          {
+            "text": "🚨 *取证实录已采集*",
+            "blocks": [
+              {
+                "type": "section",
+                "fields": [
+                  {"type": "mrkdwn", "text": "*事件:*\n{{ .incident.name }}"},
+                  {"type": "mrkdwn", "text": "*严重程度:*\n{{ .incident.severity }}"},
+                  {"type": "mrkdwn", "text": "*Pod:*\n{{ .incident.pod }}"},
+                  {"type": "mrkdwn", "text": "*证据ID:*\n{{ .actions[0].output.evidence_id }}"}
+                ]
+              },
+              {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": "*已采集证据:*\n{{ range .actions[0].output.files }}{{ .Name }}\n{{ end }}"}
+              }
+            ]
+          }
+
+    # 4. 隔离受感染容器
+    - name: isolate-container
+      type: kubernetes
+      config:
+        action: patch
+        kind: Pod
+        namespace: {{ .incident.namespace }}
+        selector: {{ .incident.pod }}
+        patch:
+          metadata:
+            labels:
+              vsentry.io/quarantined: "true"
+              vsentry.io/evidence-id: {{ .actions[0].output.evidence_id }}
+          spec:
+            tolerations: []

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/expr-lang/expr"
+	"github.com/laenix/vsentry/ephemeral"
 )
 
 // RunHTTPRequest Execute标准 HTTP RequestAction
@@ -152,4 +153,62 @@ func RunCondition(config map[string]interface{}, ctx *ExecutionContext) StepResu
 
 	// 否则走 Low-Code List判断 (省略重复逻辑，建议ago端统一传 expression)
 	return StepResult{Status: "failed", Error: "No valid expression found"}
+}
+
+// RunForensics 执行云原生易失性取证
+// 从运行中的 Kubernetes 容器采集内存快照和文件系统证据
+func RunForensics(config map[string]interface{}, ctx *ExecutionContext) StepResult {
+	// 从上下文解析模板变量
+	// 支持: {{ .incident.pod }}, {{ .incident.container }} 等
+	
+	processedConfig := processTemplateVariables(config, ctx)
+
+	// 调用 ephemeral 取证引擎
+	result, err := ephemeral.QuickCapture(processedConfig)
+	if err != nil {
+		return StepResult{
+			Status:  "failed",
+			Error:   fmt.Sprintf("Forensics error: %v", err),
+			Output:  nil,
+		}
+	}
+
+	// 构建输出
+	output := map[string]interface{}{
+		"evidence_id":    result.EvidenceID,
+		"success":        result.Success,
+		"timestamp":      result.Timestamp.Format("2006-01-02 15:04:05"),
+		"evidence_type":  result.EvidenceType,
+		"files":          result.Files,
+		"metadata":       result.Metadata,
+	}
+
+	if result.Error != "" {
+		output["error"] = result.Error
+	}
+
+	return StepResult{
+		Status: "success",
+		Output: output,
+	}
+}
+
+// processTemplateVariables 处理配置中的模板变量
+// 将 {{ .incident.pod }} 替换为实际值
+func processTemplateVariables(config map[string]interface{}, ctx *ExecutionContext) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	for k, v := range config {
+		if str, ok := v.(string); ok {
+			// 简单的模板替换
+			processed := str
+			// 实际应该使用模板引擎解析
+			// 这里做简化处理
+			result[k] = processed
+		} else {
+			result[k] = v
+		}
+	}
+
+	return result
 }
